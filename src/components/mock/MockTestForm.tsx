@@ -14,13 +14,9 @@ import {
   type SubjectFormState,
   type SubjectKey,
 } from '@/lib/mockCalculations';
-import { cn } from '@/lib/utils';
 
-function buildInitialSubjects(type: 'full' | 'sectional'): Record<SubjectKey, SubjectFormState> {
-  const sub =
-    type === 'full'
-      ? emptySubject(FULL_MOCK_DEFAULTS.subjectMax, FULL_MOCK_DEFAULTS.subjectQuestions)
-      : emptySubject(50, 25);
+function buildFullSubjects(): Record<SubjectKey, SubjectFormState> {
+  const sub = emptySubject(FULL_MOCK_DEFAULTS.subjectMax, FULL_MOCK_DEFAULTS.subjectQuestions);
   return {
     reasoning: { ...sub },
     quant: { ...sub },
@@ -56,11 +52,7 @@ export function MockTestForm({ onSubmit, onCancel, saving }: MockTestFormProps) 
   const [testName, setTestName] = useState('');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const [testDate, setTestDate] = useState(todayStr);
-  const [testType, setTestType] = useState<'full' | 'sectional'>('full');
-  const [subjects, setSubjects] = useState<Record<SubjectKey, SubjectFormState>>(() =>
-    buildInitialSubjects('full')
-  );
-  const [activeSection, setActiveSection] = useState<SubjectKey | null>(null);
+  const [subjects, setSubjects] = useState<Record<SubjectKey, SubjectFormState>>(buildFullSubjects);
 
   const totals = useMemo(() => sumSubjects(subjects), [subjects]);
 
@@ -68,17 +60,11 @@ export function MockTestForm({ onSubmit, onCancel, saving }: MockTestFormProps) 
     setSubjects((prev) => ({ ...prev, [key]: v }));
   };
 
-  const switchType = (t: 'full' | 'sectional') => {
-    setTestType(t);
-    setSubjects(buildInitialSubjects(t));
-    setActiveSection(t === 'sectional' ? 'quant' : null);
-  };
-
   const handleSubmit = async () => {
     await onSubmit({
-      test_name: testName.trim() || `SSC CGL ${testType === 'full' ? 'Full' : 'Sectional'} Mock`,
+      test_name: testName.trim() || 'SSC CGL Full Mock',
       test_date: testDate,
-      test_type: testType,
+      test_type: 'full',
       max_score: totals.maxMarks,
       total_score: totals.secured,
       total_questions: totals.totalQuestions,
@@ -109,8 +95,11 @@ export function MockTestForm({ onSubmit, onCancel, saving }: MockTestFormProps) 
       <GlassCard className="!p-5 space-y-4">
         <div className="flex items-center gap-2 text-blue-400">
           <Calculator size={20} />
-          <h2 className="text-lg font-semibold text-white">Save Mock Test</h2>
+          <h2 className="text-lg font-semibold text-white">Save Full Mock Test</h2>
         </div>
+        <p className="text-xs text-slate-500">
+          All four sections (200 marks). For single-subject practice, use Sectional Analytics.
+        </p>
 
         <div className="grid sm:grid-cols-2 gap-3">
           <label className="block sm:col-span-2">
@@ -122,7 +111,7 @@ export function MockTestForm({ onSubmit, onCancel, saving }: MockTestFormProps) 
               className="mt-1 w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white"
             />
           </label>
-          <label className="block">
+          <label className="block sm:col-span-2">
             <span className="text-xs text-slate-500 uppercase">Mock date</span>
             <input
               type="date"
@@ -136,47 +125,7 @@ export function MockTestForm({ onSubmit, onCancel, saving }: MockTestFormProps) 
             />
             <p className="text-[10px] text-slate-500 mt-1">Today or earlier only (no future dates)</p>
           </label>
-          <div className="block">
-            <span className="text-xs text-slate-500 uppercase">Mock type</span>
-            <div className="mt-1 flex gap-2">
-              {(['full', 'sectional'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => switchType(t)}
-                  className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-medium border transition',
-                    testType === t
-                      ? 'bg-blue-500/25 text-blue-300 border-blue-500/40'
-                      : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
-                  )}
-                >
-                  {t === 'full' ? 'Full Mock' : 'Sectional Mock'}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
-
-        {testType === 'sectional' && (
-          <div className="flex flex-wrap gap-2">
-            {MOCK_SUBJECTS.map(({ key, short }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActiveSection(key)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-xs border',
-                  activeSection === key
-                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                    : 'text-slate-500 border-white/10'
-                )}
-              >
-                {short}
-              </button>
-            ))}
-          </div>
-        )}
       </GlassCard>
 
       <GlassCard className="!p-5">
@@ -204,18 +153,16 @@ export function MockTestForm({ onSubmit, onCancel, saving }: MockTestFormProps) 
       <div>
         <h3 className="text-sm font-semibold text-white mb-3">Subject-wise performance</h3>
         <div className="grid md:grid-cols-2 gap-4">
-          {MOCK_SUBJECTS.map(({ key, label, color }) =>
-            testType === 'full' || activeSection === key ? (
-              <MockSubjectCard
-                key={key}
-                subjectKey={key}
-                label={label}
-                color={color}
-                value={subjects[key]}
-                onChange={(v) => setSubject(key, v)}
-              />
-            ) : null
-          )}
+          {MOCK_SUBJECTS.map(({ key, label, color }) => (
+            <MockSubjectCard
+              key={key}
+              subjectKey={key}
+              label={label}
+              color={color}
+              value={subjects[key]}
+              onChange={(v) => setSubject(key, v)}
+            />
+          ))}
         </div>
       </div>
 
@@ -233,7 +180,7 @@ export function MockTestForm({ onSubmit, onCancel, saving }: MockTestFormProps) 
           onClick={handleSubmit}
           className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium flex items-center gap-2 disabled:opacity-50"
         >
-          <Save size={16} /> {saving ? 'Saving…' : 'Save mock test'}
+          <Save size={16} /> {saving ? 'Saving…' : 'Save full mock'}
         </button>
       </div>
     </motion.div>
