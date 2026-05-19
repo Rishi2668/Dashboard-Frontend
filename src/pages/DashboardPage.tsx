@@ -111,7 +111,8 @@ export function DashboardPage() {
                       ['Calc practice', stats.xp_breakdown.calc_practice],
                       ['Syllabus', stats.xp_breakdown.syllabus],
                       ['Study logs', stats.xp_breakdown.study_sessions],
-                      ['Mocks', stats.xp_breakdown.mock_tests],
+                      ['Full mocks', stats.xp_breakdown.mock_tests],
+                      ['Sectionals', stats.xp_breakdown.sectional_tests ?? 0],
                       ['Notes', stats.xp_breakdown.notes],
                       ['Revision', stats.xp_breakdown.revision],
                     ] as const

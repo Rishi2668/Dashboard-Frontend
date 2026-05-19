@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   BarChart3,
+  Layers,
   Brain,
   Calculator,
   RotateCcw,
@@ -23,7 +24,8 @@ const navItems = [
   { to: '/roadmap', icon: Map, label: 'Syllabus Roadmap' },
   { to: '/overall-analysis', icon: Brain, label: 'Overall Analysis' },
   { to: '/calc-trainer', icon: Calculator, label: 'Calc Trainer' },
-  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/analytics', icon: BarChart3, label: 'Full Mock Analytics' },
+  { to: '/sectional-analytics', icon: Layers, label: 'Sectional Analytics' },
   { to: '/revision', icon: RotateCcw, label: 'Revision' },
   { to: '/weak-areas', icon: AlertTriangle, label: 'Weak Areas' },
   { to: '/notes', icon: StickyNote, label: 'Notes' },

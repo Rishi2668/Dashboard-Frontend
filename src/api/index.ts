@@ -42,9 +42,11 @@ export const studyApi = {
 };
 
 export const mockApi = {
-  list: () => api.get<MockTest[]>('/mock-tests/'),
+  list: (testType?: 'full' | 'sectional') =>
+    api.get<MockTest[]>(testType ? `/mock-tests/?test_type=${testType}` : '/mock-tests/'),
   create: (data: Record<string, unknown>) => api.post<MockTest>('/mock-tests/', data),
-  analytics: () => api.get<MockAnalytics>('/mock-tests/analytics'),
+  analytics: (testType: 'full' | 'sectional' = 'full') =>
+    api.get<MockAnalytics>(`/mock-tests/analytics?test_type=${testType}`),
   delete: (id: number) => api.delete(`/mock-tests/${id}`),
 };
 

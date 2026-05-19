@@ -12,6 +12,9 @@ const ForgotPasswordPage = lazy(() =>
 );
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
+const SectionalAnalyticsPage = lazy(() =>
+  import('@/pages/SectionalAnalyticsPage').then((m) => ({ default: m.SectionalAnalyticsPage }))
+);
 const RevisionPage = lazy(() => import('@/pages/RevisionPage').then((m) => ({ default: m.RevisionPage })));
 const WeakAreasPage = lazy(() => import('@/pages/WeakAreasPage').then((m) => ({ default: m.WeakAreasPage })));
 const NotesPage = lazy(() => import('@/pages/NotesPage').then((m) => ({ default: m.NotesPage })));
@@ -66,6 +69,7 @@ export default function App() {
             <Route path="overall-analysis" element={<OverallAnalysisPage />} />
             <Route path="calc-trainer" element={<CalcTrainerPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="sectional-analytics" element={<SectionalAnalyticsPage />} />
             <Route path="revision" element={<RevisionPage />} />
             <Route path="weak-areas" element={<WeakAreasPage />} />
             <Route path="notes" element={<NotesPage />} />

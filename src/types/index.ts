@@ -18,6 +18,7 @@ export interface XpBreakdown {
   calc_practice: number;
   study_sessions: number;
   mock_tests: number;
+  sectional_tests?: number;
   notes: number;
   revision: number;
   syllabus: number;
@@ -124,6 +125,19 @@ export interface MockAIInsight {
   category: string;
 }
 
+export interface SectionalSubjectTarget {
+  key: string;
+  label: string;
+  target: number;
+  target_max: number;
+  actual: number;
+  actual_max: number;
+  gap: number;
+  achievement_pct: number;
+  has_sectional_data: boolean;
+  sectional_count: number;
+}
+
 export interface MockAnalytics {
   latest_score: number;
   highest_score: number;
@@ -153,6 +167,8 @@ export interface MockAnalytics {
   strongest_subject: string | null;
   improvement_delta: number | null;
   ai_insights: MockAIInsight[];
+  target_insights?: MockAIInsight[];
+  subject_targets?: SectionalSubjectTarget[];
   target_analytics?: TargetAnalytics;
 }
 
