@@ -1,9 +1,16 @@
 import axios from 'axios';
 
-/** In dev, use Vite proxy (/api → :8000) to avoid CORS. Override with VITE_API_URL if needed. */
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? '/api/v1' : 'http://localhost:8000/api/v1');
+/** Ensure production API base always ends with /api/v1 (common deploy mistake). */
+function resolveApiUrl(): string {
+  const fallback = import.meta.env.DEV ? '/api/v1' : 'http://localhost:8000/api/v1';
+  const raw = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || fallback;
+  const base = raw.replace(/\/+$/, '');
+  if (base.endsWith('/api/v1')) return base;
+  if (base.includes('/api/v1/')) return base.split('/api/v1/')[0] + '/api/v1';
+  return `${base}/api/v1`;
+}
+
+const API_URL = resolveApiUrl();
 
 export const api = axios.create({
   baseURL: API_URL,
