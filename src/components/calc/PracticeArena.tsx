@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, SkipForward, X, RotateCcw, Square } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -24,7 +24,7 @@ interface PracticeArenaProps {
   onEnd: () => void;
 }
 
-export function PracticeArena({
+function PracticeArenaInner({
   session,
   questionText,
   practiceType,
@@ -145,7 +145,7 @@ export function PracticeArena({
                 className="flex-1 py-3 rounded-xl bg-green-500/20 text-green-400 border border-green-500/40 font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
               >
                 <Check size={18} />
-                Submit
+                {loading ? 'Checking…' : 'Submit'}
               </button>
               <button
                 type="button"
@@ -209,3 +209,5 @@ export function PracticeArena({
     </div>
   );
 }
+
+export const PracticeArena = memo(PracticeArenaInner);

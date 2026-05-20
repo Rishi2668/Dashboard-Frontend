@@ -31,7 +31,7 @@ export function AnalyticsPage() {
     return (
       <GlassCard className="!p-8 text-center max-w-6xl">
         <p className="text-slate-400">Could not load full mock analytics.</p>
-        <button type="button" onClick={load} className="mt-3 text-blue-400 text-sm hover:underline">
+        <button type="button" onClick={() => void load()} className="mt-3 text-blue-400 text-sm hover:underline">
           Retry
         </button>
       </GlassCard>

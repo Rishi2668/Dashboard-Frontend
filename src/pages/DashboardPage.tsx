@@ -9,6 +9,7 @@ import {
   Flame,
   Award,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { StatCard } from '@/components/ui/StatCard';
@@ -20,6 +21,7 @@ import { studyApi } from '@/api';
 import { ExamTargetsEditor } from '@/components/dashboard/ExamTargetsEditor';
 import { ScoreTargetsEditor } from '@/components/dashboard/ScoreTargetsEditor';
 import { TargetScorePanel } from '@/components/target/TargetScorePanel';
+import { RevisionTracker } from '@/components/revision/RevisionTracker';
 import type { DashboardStats, StudySession } from '@/types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -27,10 +29,11 @@ import toast from 'react-hot-toast';
 interface OutletContext {
   stats: DashboardStats | null;
   setStats: (s: DashboardStats) => void;
+  refreshStats: () => void;
 }
 
 export function DashboardPage() {
-  const { stats, setStats } = useOutletContext<OutletContext>();
+  const { stats, setStats, refreshStats } = useOutletContext<OutletContext>();
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [showLog, setShowLog] = useState(false);
   const [form, setForm] = useState({
@@ -65,8 +68,21 @@ export function DashboardPage() {
       setForm({ hours: '', topics: '', productivity: '70', notes: '', revision: false });
       const { data } = await studyApi.sessions(7);
       setSessions(data);
+      refreshStats();
     } catch {
       toast.error('Failed to log session');
+    }
+  };
+
+  const deleteStudy = async (id: number) => {
+    if (!window.confirm('Delete this study session?')) return;
+    try {
+      await studyApi.deleteSession(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      refreshStats();
+      toast.success('Study session deleted');
+    } catch {
+      toast.error('Failed to delete session');
     }
   };
 
@@ -148,7 +164,9 @@ export function DashboardPage() {
         </motion.div>
       )}
 
-      <motion.div className="grid lg:grid-cols-2 gap-6">
+      <RevisionTracker onComplete={refreshStats} />
+
+      <motion.div className="grid lg:grid-cols-2 gap-6 perf-content-auto">
         <GlassCard>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white">Daily Study Tracker</h3>
@@ -216,14 +234,24 @@ export function DashboardPage() {
                     <p className="text-sm font-medium text-white">{s.topics_completed || 'Study session'}</p>
                     <p className="text-xs text-slate-500">{format(new Date(s.date), 'MMM d')}</p>
                   </motion.div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-blue-400">{s.hours}h</p>
-                    <div className="w-20 h-1.5 bg-white/10 rounded-full mt-1">
-                      <div
-                        className="h-full bg-green-500 rounded-full"
-                        style={{ width: `${s.productivity_score}%` }}
-                      />
+                  <div className="text-right flex items-center gap-2">
+                    <div>
+                      <p className="text-sm font-bold text-blue-400">{s.hours}h</p>
+                      <div className="w-20 h-1.5 bg-white/10 rounded-full mt-1">
+                        <div
+                          className="h-full bg-green-500 rounded-full"
+                          style={{ width: `${s.productivity_score}%` }}
+                        />
+                      </div>
                     </div>
+                    <button
+                      onClick={() => void deleteStudy(s.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      aria-label="Delete session"
+                      title="Delete session"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </motion.div>
               ))

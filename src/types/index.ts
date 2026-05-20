@@ -184,16 +184,7 @@ export interface Note {
   updated_at: string;
 }
 
-export interface RevisionItem {
-  id: number;
-  topic: string;
-  subject: string;
-  interval_days: number;
-  next_revision_date: string;
-  last_revised: string | null;
-  completed: boolean;
-  revision_count: number;
-}
+export type { RevisionItem, RevisionStatus, RevisionDashboardSummary, RevisionAnalytics } from './revision';
 
 export interface WeakTopic {
   id: number;

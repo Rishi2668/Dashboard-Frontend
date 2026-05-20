@@ -32,6 +32,7 @@ export function CalcTrainerPage() {
   const [mode, setMode] = useState<CalcMode>('warmup');
   const [session, setSession] = useState<CalcSession | null>(null);
   const [question, setQuestion] = useState<CalcQuestion | null>(null);
+  const [prefetchedQuestion, setPrefetchedQuestion] = useState<CalcQuestion | null>(null);
   const [fingerprints, setFingerprints] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<'idle' | 'correct' | 'wrong' | 'skipped'>('idle');
   const [explanation, setExplanation] = useState('');
@@ -123,6 +124,23 @@ export function CalcTrainerPage() {
     [fingerprints, selectedTypes]
   );
 
+  const prefetchNextQuestion = useCallback(
+    async (sess: CalcSession, fpList: string[]) => {
+      try {
+        const { data } = await calcPracticeApi.generateQuestion({
+          session_id: sess.id,
+          practice_type: selectedTypes.includes('mixed') ? 'mixed' : selectedTypes[0],
+          difficulty: sess.difficulty,
+          exclude_fingerprints: fpList.slice(-80),
+        });
+        setPrefetchedQuestion(data);
+      } catch {
+        // Ignore prefetch failures; normal "Next" flow will still request a question.
+      }
+    },
+    [selectedTypes]
+  );
+
   const startSession = async () => {
     setLoading(true);
     try {
@@ -136,6 +154,7 @@ export function CalcTrainerPage() {
       });
       setSession(data);
       setFingerprints([]);
+      setPrefetchedQuestion(null);
       setCorrectStreak(0);
       setSummary(null);
       setPhase('practice');
@@ -223,7 +242,7 @@ export function CalcTrainerPage() {
         fingerprint: question.fingerprint,
         explanation: '',
       });
-      await handleResult(data);
+      handleResult(data);
     } catch (err) {
       toast.error(apiError(err, 'Submit failed'));
     } finally {
@@ -252,7 +271,13 @@ export function CalcTrainerPage() {
       setExplanation(data.explanation);
       setDisplayAnswer(data.display_answer);
       setCorrectStreak(0);
-      await refreshSessionStats();
+      const updatedSession = data.session ?? session;
+      if (updatedSession) setSession(updatedSession);
+      const nextFp = [...fingerprints, question.fingerprint];
+      setFingerprints(nextFp);
+      if (updatedSession) {
+        void prefetchNextQuestion(updatedSession, nextFp);
+      }
     } catch (err) {
       toast.error(apiError(err, 'Skip failed'));
     } finally {
@@ -260,7 +285,7 @@ export function CalcTrainerPage() {
     }
   };
 
-  const handleResult = async (data: CalcAttemptResult) => {
+  const handleResult = (data: CalcAttemptResult) => {
     setFeedback(data.is_correct ? 'correct' : 'wrong');
     setExplanation(data.explanation);
     setDisplayAnswer(data.display_answer);
@@ -275,20 +300,29 @@ export function CalcTrainerPage() {
     } else {
       setCorrectStreak(0);
     }
-    await refreshSessionStats();
-  };
-
-  const refreshSessionStats = async () => {
-    try {
-      const { data: active } = await calcPracticeApi.activeSession();
-      if (active) setSession(active);
-    } catch {
-      /* keep local session state */
+    const updatedSession = data.session ?? session;
+    if (updatedSession) setSession(updatedSession);
+    if (question) {
+      const nextFp = [...fingerprints, question.fingerprint];
+      setFingerprints(nextFp);
+      if (updatedSession) {
+        void prefetchNextQuestion(updatedSession, nextFp);
+      }
     }
   };
 
   const nextQuestion = async () => {
     if (!session) return;
+    if (prefetchedQuestion) {
+      setQuestion(prefetchedQuestion);
+      setPrefetchedQuestion(null);
+      setFeedback('idle');
+      setExplanation('');
+      setDisplayAnswer('');
+      questionStartRef.current = Date.now();
+      setQuestionElapsedMs(0);
+      return;
+    }
     await loadQuestion(session);
   };
 

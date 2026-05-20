@@ -1,9 +1,10 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
@@ -39,46 +40,63 @@ function PageLoader() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const idle = 'requestIdleCallback' in window
+      ? (window as Window & { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback(() => {
+          void import('@/pages/DashboardPage');
+          void import('@/pages/AnalyticsPage');
+          void import('@/pages/SectionalAnalyticsPage');
+        })
+      : null;
+    return () => {
+      if (idle != null && 'cancelIdleCallback' in window) {
+        (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idle);
+      }
+    };
+  }, []);
+
   return (
-    <BrowserRouter>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#1a1a24',
-            color: '#e2e8f0',
-            border: '1px solid rgba(255,255,255,0.1)',
-          },
-        }}
-      />
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="roadmap" element={<SyllabusRoadmapPage />} />
-            <Route path="overall-analysis" element={<OverallAnalysisPage />} />
-            <Route path="calc-trainer" element={<CalcTrainerPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="sectional-analytics" element={<SectionalAnalyticsPage />} />
-            <Route path="revision" element={<RevisionPage />} />
-            <Route path="weak-areas" element={<WeakAreasPage />} />
-            <Route path="notes" element={<NotesPage />} />
-            <Route path="targets" element={<TargetsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#1a1a24',
+              color: '#e2e8f0',
+              border: '1px solid rgba(255,255,255,0.1)',
+            },
+          }}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<DashboardPage />} />
+              <Route path="roadmap" element={<SyllabusRoadmapPage />} />
+              <Route path="overall-analysis" element={<OverallAnalysisPage />} />
+              <Route path="calc-trainer" element={<CalcTrainerPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="sectional-analytics" element={<SectionalAnalyticsPage />} />
+              <Route path="revision" element={<RevisionPage />} />
+              <Route path="weak-areas" element={<WeakAreasPage />} />
+              <Route path="notes" element={<NotesPage />} />
+              <Route path="targets" element={<TargetsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

@@ -37,6 +37,7 @@ export interface CalcAttemptResult {
   explanation: string;
   correct_answer: number;
   display_answer: string;
+  session: CalcSession;
 }
 
 export interface CalcSessionEnd {

@@ -1,4 +1,5 @@
 import { api } from './client';
+import { normalizeRevisionList } from '@/lib/revisionFallback';
 import type {
   AIInsight,
   DailyTarget,
@@ -31,6 +32,7 @@ export const studyApi = {
   sessions: (limit = 30) => api.get<StudySession[]>('/study/sessions', { params: { limit } }),
   createSession: (data: Partial<StudySession> & { date: string; hours: number }) =>
     api.post<StudySession>('/study/sessions', data),
+  deleteSession: (id: number) => api.delete(`/study/sessions/${id}`),
   heatmap: (days = 90) => api.get<{ date: string; hours: number; level: number }[]>('/study/heatmap', { params: { days } }),
   targets: (target_date?: string) =>
     api.get<DailyTarget[]>('/study/targets', { params: { target_date } }),
@@ -42,8 +44,14 @@ export const studyApi = {
 };
 
 export const mockApi = {
-  list: (testType?: 'full' | 'sectional') =>
-    api.get<MockTest[]>(testType ? `/mock-tests/?test_type=${testType}` : '/mock-tests/'),
+  list: (testType?: 'full' | 'sectional', options?: { limit?: number; offset?: number }) =>
+    api.get<MockTest[]>('/mock-tests/', {
+      params: {
+        ...(testType ? { test_type: testType } : {}),
+        ...(options?.limit != null ? { limit: options.limit } : {}),
+        ...(options?.offset != null ? { offset: options.offset } : {}),
+      },
+    }),
   create: (data: Record<string, unknown>) => api.post<MockTest>('/mock-tests/', data),
   analytics: (testType: 'full' | 'sectional' = 'full') =>
     api.get<MockAnalytics>(`/mock-tests/analytics?test_type=${testType}`),
@@ -59,10 +67,38 @@ export const notesApi = {
 };
 
 export const revisionApi = {
-  list: () => api.get<RevisionItem[]>('/revision/'),
+  list: async (params?: {
+    status?: string;
+    subject?: string;
+    priority?: string;
+    difficulty?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const res = await api.get('/revision/', { params });
+    return { ...res, data: normalizeRevisionList(res.data) };
+  },
   pending: () => api.get<RevisionItem[]>('/revision/pending'),
-  create: (data: { topic: string; subject: string; interval_days: number }) =>
-    api.post<RevisionItem>('/revision/', data),
+  overdue: () => api.get<RevisionItem[]>('/revision/overdue'),
+  upcoming: (days = 7) => api.get<RevisionItem[]>('/revision/upcoming', { params: { days } }),
+  dashboard: () => api.get<import('@/types/revision').RevisionDashboardSummary>('/revision/dashboard'),
+  analytics: () => api.get<import('@/types/revision').RevisionAnalytics>('/revision/analytics'),
+  aiRecommendations: () =>
+    api.get<import('@/types/revision').RevisionAIRecommendation[]>('/revision/ai-recommendations'),
+  history: (limit = 50) =>
+    api.get<import('@/types/revision').RevisionHistoryEntry[]>('/revision/history', { params: { limit } }),
+  create: (data: {
+    topic: string;
+    subject: string;
+    interval_days?: number;
+    next_revision_date?: string;
+    notes?: string;
+    priority?: string;
+    difficulty?: string;
+  }) => api.post<RevisionItem>('/revision/', data),
+  update: (id: number, data: Record<string, unknown>) =>
+    api.patch<RevisionItem>(`/revision/${id}`, data),
   complete: (id: number) => api.post<RevisionItem>(`/revision/${id}/complete`),
   delete: (id: number) => api.delete(`/revision/${id}`),
 };

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DeferredRender } from '@/components/perf/DeferredRender';
 import { MOCK_SUBJECTS } from '@/lib/mockCalculations';
 import { filterMocksByType, primarySubject } from '@/lib/mockClassification';
 import type { MockAnalytics, MockTest, SectionalSubjectTarget } from '@/types';
@@ -232,6 +233,7 @@ export function SectionalAnalyticsView({
           </GlassCard>
 
           {/* Chart */}
+          <DeferredRender minHeight={320}>
           <GlassCard className="!p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white flex items-center gap-2">
@@ -292,9 +294,11 @@ export function SectionalAnalyticsView({
               </ResponsiveContainer>
             )}
           </GlassCard>
+          </DeferredRender>
 
           {/* Compare all subjects bar */}
           {targets.length > 0 && (
+            <DeferredRender minHeight={260}>
             <GlassCard className="!p-5">
               <h3 className="font-semibold text-white mb-4">All subjects: actual vs target</h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -325,6 +329,7 @@ export function SectionalAnalyticsView({
                 </BarChart>
               </ResponsiveContainer>
             </GlassCard>
+            </DeferredRender>
           )}
 
           {/* AI */}

@@ -10,7 +10,7 @@ function resolveApiUrl(): string {
   return `${base}/api/v1`;
 }
 
-const API_URL = resolveApiUrl();
+export const API_URL = resolveApiUrl();
 
 export const api = axios.create({
   baseURL: API_URL,

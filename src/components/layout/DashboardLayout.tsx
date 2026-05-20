@@ -3,30 +3,32 @@ import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { RightPanel } from './RightPanel';
 import { useUIStore } from '@/store/uiStore';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { dashboardApi } from '@/api';
 import type { DashboardStats } from '@/types';
 import { LogOut, Focus, Maximize2, Minimize2 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export function DashboardLayout() {
   const location = useLocation();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
   const { focusMode, setFocusMode, pomodoroActive, tickPomodoro } = useUIStore();
   const { active: browserFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const refreshStats = () => {
-    dashboardApi.stats().then((r) => setStats(r.data)).catch(() => {});
-  };
-
-  useEffect(() => {
-    refreshStats();
-  }, []);
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => (await dashboardApi.stats()).data as DashboardStats,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+  });
+  const refreshStats = () => queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+  const setStats = (next: DashboardStats) => queryClient.setQueryData(['dashboard-stats'], next);
 
   useEffect(() => {
     if (!pomodoroActive) return;
@@ -96,9 +98,9 @@ export function DashboardLayout() {
             transition={{ duration: 0.2 }}
             className="flex-1 overflow-y-auto p-6"
           >
-            <Outlet context={{ stats, setStats, refreshStats }} />
+            <Outlet context={{ stats: stats ?? null, setStats, refreshStats }} />
           </motion.div>
-          {!focusMode && <RightPanel stats={stats} />}
+          {!focusMode && <RightPanel stats={stats ?? null} />}
         </div>
       </main>
     </div>

@@ -25,6 +25,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { StatCard } from '@/components/ui/StatCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { TargetScorePanel } from '@/components/target/TargetScorePanel';
+import { DeferredRender } from '@/components/perf/DeferredRender';
 import type { MockAnalytics, MockTest } from '@/types';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
@@ -177,6 +178,7 @@ export function FullMockAnalyticsView({
           )}
 
           {/* Charts */}
+          <DeferredRender minHeight={300}>
           <div className="grid lg:grid-cols-2 gap-4">
             <GlassCard className="!p-4">
               <h3 className="font-semibold text-white mb-3">Score progression</h3>
@@ -240,9 +242,11 @@ export function FullMockAnalyticsView({
               </GlassCard>
             )}
           </div>
+          </DeferredRender>
 
           {/* AI */}
           {(analytics.ai_insights?.length ?? 0) > 0 && (
+            <DeferredRender minHeight={180}>
             <GlassCard className="!p-4">
               <h3 className="font-semibold text-white flex items-center gap-2 mb-3">
                 <Brain size={18} className="text-blue-400" />
@@ -260,6 +264,7 @@ export function FullMockAnalyticsView({
                 ))}
               </div>
             </GlassCard>
+            </DeferredRender>
           )}
 
           {/* History */}

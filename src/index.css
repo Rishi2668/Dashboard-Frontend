@@ -18,6 +18,7 @@
 
 html {
   scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -27,6 +28,13 @@ body {
   color: #e2e8f0;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reduce expensive paint work for off-screen sections */
+.perf-content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 700px;
 }
 
 #root {
