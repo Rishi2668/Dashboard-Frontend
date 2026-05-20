@@ -20,7 +20,8 @@ export function RevisionCard({
   deleting,
   compact,
 }: RevisionCardProps) {
-  const style = STATUS_STYLES[item.status];
+  const status = item.status ?? 'upcoming';
+  const style = STATUS_STYLES[status] ?? STATUS_STYLES.upcoming;
 
   return (
     <motion.div
@@ -29,16 +30,16 @@ export function RevisionCard({
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ x: 4 }}
       className={`flex items-start gap-3 p-3 rounded-xl border ${
-        item.status === 'overdue'
+        status === 'overdue'
           ? 'bg-red-500/10 border-red-500/25'
-          : item.status === 'pending'
+          : status === 'pending'
             ? 'bg-yellow-500/10 border-yellow-500/20'
-            : item.status === 'completed'
+            : status === 'completed'
               ? 'bg-green-500/10 border-green-500/20'
               : 'bg-white/5 border-white/10'
       }`}
     >
-      {item.status !== 'completed' && (
+      {status !== 'completed' && (
         <AnimatedCheckbox
           checked={false}
           onToggle={() => onComplete(item.id)}
@@ -51,7 +52,7 @@ export function RevisionCard({
           <span className={`text-[10px] px-2 py-0.5 rounded-full border ${style.badge}`}>
             {style.label}
           </span>
-          {item.status === 'overdue' && item.days_overdue > 0 && (
+          {status === 'overdue' && (item.days_overdue ?? 0) > 0 && (
             <span className="text-[10px] text-red-300">{overdueLabel(item.days_overdue)}</span>
           )}
         </div>

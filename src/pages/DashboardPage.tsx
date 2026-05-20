@@ -18,10 +18,13 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { StudyHeatmap } from '@/components/charts/StudyHeatmap';
 import { studyApi } from '@/api';
+import { apiError } from '@/lib/apiError';
 import { ExamTargetsEditor } from '@/components/dashboard/ExamTargetsEditor';
 import { ScoreTargetsEditor } from '@/components/dashboard/ScoreTargetsEditor';
 import { TargetScorePanel } from '@/components/target/TargetScorePanel';
 import { RevisionTracker } from '@/components/revision/RevisionTracker';
+import { useBackendFeatures } from '@/hooks/useBackendFeatures';
+import { API_URL } from '@/api/client';
 import type { DashboardStats, StudySession } from '@/types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -34,6 +37,8 @@ interface OutletContext {
 
 export function DashboardPage() {
   const { stats, setStats, refreshStats } = useOutletContext<OutletContext>();
+  const { features, checked } = useBackendFeatures();
+  const healthUrl = API_URL.replace(/\/api\/v1\/?$/, '') + '/health';
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [showLog, setShowLog] = useState(false);
   const [form, setForm] = useState({
@@ -77,12 +82,27 @@ export function DashboardPage() {
   const deleteStudy = async (id: number) => {
     if (!window.confirm('Delete this study session?')) return;
     try {
+      const { data: fresh } = await studyApi.sessions(7);
+      setSessions(fresh);
+      if (!fresh.some((s) => s.id === id)) {
+        toast.error('This session is no longer in your list. Refreshing…');
+        return;
+      }
       await studyApi.deleteSession(id);
       setSessions((prev) => prev.filter((s) => s.id !== id));
       refreshStats();
       toast.success('Study session deleted');
-    } catch {
-      toast.error('Failed to delete session');
+    } catch (err) {
+      const msg = apiError(err, 'Failed to delete session');
+      if (msg === 'Not Found' || msg.includes('Not Found')) {
+        toast.error(
+          'Delete API is not live on Railway yet. Redeploy the backend, then open /health and confirm study_session_delete is true.'
+        );
+      } else {
+        toast.error(msg);
+      }
+      const { data } = await studyApi.sessions(7).catch(() => ({ data: [] }));
+      setSessions(data);
     }
   };
 
@@ -220,6 +240,16 @@ export function DashboardPage() {
             </motion.div>
           )}
 
+          {checked && !features.study_session_delete && (
+            <p className="text-xs text-amber-400/90 mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              Delete is unavailable until the backend is redeployed on Railway. After deploy, open{' '}
+              <a href={healthUrl} target="_blank" rel="noreferrer" className="underline">
+                /health
+              </a>{' '}
+              and confirm <code className="text-amber-200">study_session_delete: true</code>.
+            </p>
+          )}
+
           <div className="space-y-2">
             {sessions.length === 0 ? (
               <p className="text-sm text-slate-500">No sessions logged yet. Start your streak!</p>
@@ -244,14 +274,16 @@ export function DashboardPage() {
                         />
                       </div>
                     </div>
-                    <button
-                      onClick={() => void deleteStudy(s.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      aria-label="Delete session"
-                      title="Delete session"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {features.study_session_delete && (
+                      <button
+                        onClick={() => void deleteStudy(s.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        aria-label="Delete session"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ))

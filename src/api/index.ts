@@ -32,7 +32,17 @@ export const studyApi = {
   sessions: (limit = 30) => api.get<StudySession[]>('/study/sessions', { params: { limit } }),
   createSession: (data: Partial<StudySession> & { date: string; hours: number }) =>
     api.post<StudySession>('/study/sessions', data),
-  deleteSession: (id: number) => api.delete(`/study/sessions/${id}`),
+  deleteSession: async (id: number) => {
+    try {
+      return await api.delete(`/study/sessions/${id}`);
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404 || status === 405) {
+        return await api.post(`/study/sessions/${id}/delete`);
+      }
+      throw err;
+    }
+  },
   heatmap: (days = 90) => api.get<{ date: string; hours: number; level: number }[]>('/study/heatmap', { params: { days } }),
   targets: (target_date?: string) =>
     api.get<DailyTarget[]>('/study/targets', { params: { target_date } }),

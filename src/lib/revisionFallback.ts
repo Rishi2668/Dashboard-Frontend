@@ -1,12 +1,19 @@
-import { addDays, format, isBefore, parseISO, startOfDay } from 'date-fns';
+import { addDays, format, isBefore, isValid, parseISO, startOfDay } from 'date-fns';
 import type { RevisionDashboardSummary, RevisionItem, RevisionListResponse } from '@/types/revision';
+
+function safeParseDate(value: string): Date | null {
+  if (!value) return null;
+  const d = parseISO(value.length === 10 ? value : value.slice(0, 10));
+  return isValid(d) ? startOfDay(d) : null;
+}
 
 export function computeRevisionStatus(
   item: Pick<RevisionItem, 'completed' | 'next_revision_date'>
 ): RevisionItem['status'] {
   if (item.completed) return 'completed';
   const today = startOfDay(new Date());
-  const due = startOfDay(parseISO(item.next_revision_date));
+  const due = safeParseDate(item.next_revision_date);
+  if (!due) return 'upcoming';
   if (isBefore(due, today)) return 'overdue';
   if (due.getTime() === today.getTime()) return 'pending';
   return 'upcoming';
@@ -31,9 +38,11 @@ export function enrichRevisionItem(raw: Record<string, unknown>): RevisionItem {
   };
   const status = (raw.status as RevisionItem['status']) ?? computeRevisionStatus(base);
   const today = startOfDay(new Date());
-  const due = startOfDay(parseISO(next));
+  const due = safeParseDate(next);
   const days_overdue =
-    status === 'overdue' ? Math.max(0, Math.round((today.getTime() - due.getTime()) / 86400000)) : 0;
+    status === 'overdue' && due
+      ? Math.max(0, Math.round((today.getTime() - due.getTime()) / 86400000))
+      : 0;
   return {
     ...base,
     status,
@@ -70,8 +79,8 @@ export function buildDashboardFromItems(items: RevisionItem[]): RevisionDashboar
   const weekEnd = addDays(new Date(), 6);
   const weekItems = items.filter((i) => {
     if (i.completed) return false;
-    const d = parseISO(i.next_revision_date);
-    return d >= startOfDay(new Date()) && d <= weekEnd;
+    const d = safeParseDate(i.next_revision_date);
+    return d != null && d >= startOfDay(new Date()) && d <= weekEnd;
   });
 
   return {
