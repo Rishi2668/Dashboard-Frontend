@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 import type { RevisionItem } from '@/types/revision';
 import { STATUS_STYLES, overdueLabel } from '@/lib/revisionStatus';
+import { revisionStageLabel } from '@/lib/revisionSchedule';
 import { AnimatedCheckbox } from './AnimatedCheckbox';
 
 interface RevisionCardProps {
@@ -57,7 +58,8 @@ export function RevisionCard({
           )}
         </div>
         <p className="text-xs text-slate-400 mt-0.5">
-          {item.subject} · {format(new Date(item.next_revision_date), 'MMM d, yyyy')}
+          {item.subject} · {revisionStageLabel(item.interval_days)} revision ·{' '}
+          {format(new Date(item.next_revision_date), 'MMM d, yyyy')}
           {!compact && ` · Rev #${item.revision_count}`}
           {item.priority && item.priority !== 'medium' && ` · ${item.priority} priority`}
         </p>

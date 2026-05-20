@@ -16,6 +16,7 @@ import type {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { SUBJECTS } from '@/lib/utils';
+import { REVISION_SCHEDULE, nextStageAfterComplete } from '@/lib/revisionSchedule';
 
 interface LayoutContext {
   refreshStats?: () => void;
@@ -135,20 +136,25 @@ export function RevisionPage() {
     await revisionApi.create({
       topic: topic.trim(),
       subject,
-      interval_days: 1,
+      interval_days: 3,
       notes: notes.trim() || undefined,
       priority,
       difficulty,
     });
-    toast.success('Revision scheduled — first review in 1 day');
+    toast.success('Revision scheduled — first review on Day 3');
     setTopic('');
     setNotes('');
     void load();
   };
 
   const complete = async (id: number) => {
+    const item = items.find((i) => i.id === id);
     await revisionApi.complete(id);
-    toast.success('Revision completed! Next interval scheduled.', { icon: '✅' });
+    const next = item ? nextStageAfterComplete(item.interval_days) : null;
+    toast.success(
+      next ? `Done! Next: ${next} revision scheduled.` : 'Cycle complete — topic mastered!',
+      { icon: '✅' }
+    );
     void load();
     refreshStats?.();
   };
@@ -308,8 +314,15 @@ export function RevisionPage() {
               onClick={() => void addItem()}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-1 text-sm font-medium"
             >
-              <Plus size={16} /> Schedule (1→7→30 day)
+              <Plus size={16} /> Schedule (3→7→15 day)
             </button>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {REVISION_SCHEDULE.map((d) => (
+              <span key={d} className="text-xs px-2 py-1 bg-white/5 rounded-full text-slate-400">
+                Day {d} revision
+              </span>
+            ))}
           </div>
         </div>
       </GlassCard>

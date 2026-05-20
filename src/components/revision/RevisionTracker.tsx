@@ -84,7 +84,7 @@ export function RevisionTracker({ onComplete, compact }: RevisionTrackerProps) {
           <RotateCcw className="text-blue-400" size={22} />
           <div>
             <h3 className="font-semibold text-white">Revision Tracker</h3>
-            <p className="text-xs text-slate-500">Spaced repetition · retention · consistency</p>
+            <p className="text-xs text-slate-500">3 → 7 → 15 day revision cycle</p>
           </div>
         </div>
         <Link

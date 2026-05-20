@@ -25,7 +25,7 @@ export function enrichRevisionItem(raw: Record<string, unknown>): RevisionItem {
     id: Number(raw.id),
     topic: String(raw.topic ?? ''),
     subject: String(raw.subject ?? ''),
-    interval_days: Number(raw.interval_days ?? 1),
+    interval_days: Number(raw.interval_days ?? 3),
     next_revision_date: next,
     last_revised: (raw.last_revised as string | null) ?? null,
     completed: Boolean(raw.completed),
