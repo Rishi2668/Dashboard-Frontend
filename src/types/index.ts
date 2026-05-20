@@ -27,6 +27,11 @@ export interface XpBreakdown {
 
 import type { TargetAnalytics } from '@/types/targetScore';
 
+export interface ApiFeatures {
+  study_session_delete: boolean;
+  revision_management_v2: boolean;
+}
+
 export interface DashboardStats {
   user: User;
   days_left: number;
@@ -46,6 +51,7 @@ export interface DashboardStats {
   xp_for_next: number;
   xp_breakdown?: XpBreakdown;
   target_analytics?: TargetAnalytics;
+  api_features?: ApiFeatures;
   achievements: Achievement[];
   streaks: Streak[];
 }

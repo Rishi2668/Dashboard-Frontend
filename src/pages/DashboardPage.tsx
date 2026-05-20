@@ -38,7 +38,8 @@ interface OutletContext {
 export function DashboardPage() {
   const { stats, setStats, refreshStats } = useOutletContext<OutletContext>();
   const { features, checked } = useBackendFeatures();
-  const healthUrl = API_URL.replace(/\/api\/v1\/?$/, '') + '/health';
+  const canDeleteStudy =
+    stats?.api_features?.study_session_delete === true || features.study_session_delete;
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [showLog, setShowLog] = useState(false);
   const [form, setForm] = useState({
@@ -73,7 +74,7 @@ export function DashboardPage() {
       setForm({ hours: '', topics: '', productivity: '70', notes: '', revision: false });
       const { data } = await studyApi.sessions(7);
       setSessions(data);
-      refreshStats();
+      await refreshStats();
     } catch {
       toast.error('Failed to log session');
     }
@@ -90,7 +91,7 @@ export function DashboardPage() {
       }
       await studyApi.deleteSession(id);
       setSessions((prev) => prev.filter((s) => s.id !== id));
-      refreshStats();
+      await refreshStats();
       toast.success('Study session deleted');
     } catch (err) {
       const msg = apiError(err, 'Failed to delete session');
@@ -240,13 +241,12 @@ export function DashboardPage() {
             </motion.div>
           )}
 
-          {checked && !features.study_session_delete && (
+          {checked && !canDeleteStudy && (
             <p className="text-xs text-amber-400/90 mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              Delete is unavailable until the backend is redeployed on Railway. After deploy, open{' '}
-              <a href={healthUrl} target="_blank" rel="noreferrer" className="underline">
-                /health
-              </a>{' '}
-              and confirm <code className="text-amber-200">study_session_delete: true</code>.
+              Delete is unavailable on the API this app is using. Current API:{' '}
+              <code className="text-amber-200 break-all">{API_URL}</code>. If you deployed on Render,
+              set Vercel <code className="text-amber-200">VITE_API_URL</code> to your Render URL +{' '}
+              <code className="text-amber-200">/api/v1</code>, redeploy frontend, then hard refresh.
             </p>
           )}
 
@@ -274,7 +274,7 @@ export function DashboardPage() {
                         />
                       </div>
                     </div>
-                    {features.study_session_delete && (
+                    {canDeleteStudy && (
                       <button
                         onClick={() => void deleteStudy(s.id)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/api/client';
+import { api, API_URL } from '@/api/client';
 
 export type BackendFeatures = {
   study_session_delete: boolean;
@@ -17,13 +17,25 @@ export function useBackendFeatures() {
 
   useEffect(() => {
     const origin = API_URL.replace(/\/api\/v1\/?$/, '');
-    fetch(`${origin}/health`)
-      .then((r) => r.json())
-      .then((data: { api_features?: Partial<BackendFeatures> }) => {
-        setFeatures({ ...DEFAULT, ...data.api_features });
-      })
-      .catch(() => setFeatures(DEFAULT))
-      .finally(() => setChecked(true));
+
+    const apply = (data: { api_features?: Partial<BackendFeatures> }) => {
+      setFeatures({ ...DEFAULT, ...data.api_features });
+      setChecked(true);
+    };
+
+    // Prefer dashboard stats (same API URL as the rest of the app)
+    api
+      .get('/dashboard/stats')
+      .then((r) => apply(r.data as { api_features?: Partial<BackendFeatures> }))
+      .catch(() =>
+        fetch(`${origin}/health`)
+          .then((r) => r.json())
+          .then(apply)
+          .catch(() => {
+            setFeatures(DEFAULT);
+            setChecked(true);
+          })
+      );
   }, []);
 
   return { features, checked };
