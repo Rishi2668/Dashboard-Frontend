@@ -8,7 +8,8 @@ type MetricPayload = {
   navigationType: string;
 };
 
-const WEB_VITALS_URL = `${API_URL}/metrics/web-vitals`;
+// Avoid /metrics/ in the path — many ad blockers block it (ERR_BLOCKED_BY_CLIENT).
+const WEB_VITALS_URL = `${API_URL}/perf/cwv`;
 
 function sendMetric(payload: MetricPayload) {
   const body = JSON.stringify(payload);

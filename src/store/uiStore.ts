@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 interface UIState {
   sidebarOpen: boolean;
+  sidebarCollapsed: boolean;
   focusMode: boolean;
   minimalMode: boolean;
   fullscreenStudy: boolean;
@@ -10,6 +11,7 @@ interface UIState {
   pomodoroActive: boolean;
   pomodoroSecondsLeft: number;
   toggleSidebar: () => void;
+  toggleSidebarCollapsed: () => void;
   setFocusMode: (v: boolean) => void;
   setMinimalMode: (v: boolean) => void;
   setFullscreenStudy: (v: boolean) => void;
@@ -22,6 +24,7 @@ export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
       sidebarOpen: true,
+      sidebarCollapsed: false,
       focusMode: false,
       minimalMode: false,
       fullscreenStudy: false,
@@ -30,6 +33,7 @@ export const useUIStore = create<UIState>()(
       pomodoroSecondsLeft: 25 * 60,
 
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+      toggleSidebarCollapsed: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setFocusMode: (v) => set({ focusMode: v, minimalMode: v ? true : get().minimalMode }),
       setMinimalMode: (v) => set({ minimalMode: v }),
       setFullscreenStudy: (v) => set({ fullscreenStudy: v }),
@@ -45,6 +49,9 @@ export const useUIStore = create<UIState>()(
         }
       },
     }),
-    { name: 'ui-storage', partialize: (s) => ({ minimalMode: s.minimalMode }) }
+    {
+      name: 'ui-storage',
+      partialize: (s) => ({ minimalMode: s.minimalMode, sidebarCollapsed: s.sidebarCollapsed }),
+    }
   )
 );
