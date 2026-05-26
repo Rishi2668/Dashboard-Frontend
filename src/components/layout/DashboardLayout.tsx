@@ -10,6 +10,7 @@ import { LogOut, Focus, Maximize2, Minimize2 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export function DashboardLayout() {
@@ -48,7 +49,7 @@ export function DashboardLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0f]">
+    <div className="flex min-h-screen bg-app">
       {!focusMode && <Sidebar />}
       <main className="flex-1 flex flex-col min-w-0">
         <header className="sticky top-0 z-20 glass border-b border-white/5 px-6 py-4 flex items-center justify-between">
@@ -61,6 +62,7 @@ export function DashboardLayout() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button
               onClick={() => setFocusMode(!focusMode)}
               className={`p-2 rounded-xl transition ${focusMode ? 'bg-orange-500/20 text-orange-400' : 'glass text-slate-400 hover:text-white'}`}

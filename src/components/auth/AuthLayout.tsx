@@ -1,10 +1,14 @@
 import { motion } from 'framer-motion';
 import { Flame } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export function AuthLayout({ children, title, subtitle }: { children: ReactNode; title: string; subtitle: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-app">
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
       <motion.div
         className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-orange-900/10"
         animate={{ opacity: [0.5, 0.8, 0.5] }}

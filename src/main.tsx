@@ -5,7 +5,20 @@ import './index.css';
 import App from './App.tsx';
 import { queryClient } from '@/lib/queryClient';
 import { initWebVitals } from '@/lib/webVitals';
+import { applyTheme, type Theme } from '@/lib/theme';
 
+function getInitialTheme(): Theme {
+  try {
+    const stored = JSON.parse(localStorage.getItem('ui-storage') || '{}') as {
+      state?: { theme?: Theme };
+    };
+    return stored.state?.theme === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+applyTheme(getInitialTheme());
 initWebVitals();
 
 createRoot(document.getElementById('root')!).render(
