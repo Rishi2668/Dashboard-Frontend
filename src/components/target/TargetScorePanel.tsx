@@ -42,15 +42,20 @@ function ProgressBar({
 
 function SimpleTargetPanel({ data }: { data: TargetAnalytics }) {
   const { overall, subjects, has_mock_data } = data;
-  const overallPct = has_mock_data ? overall.achievement_pct : 0;
+  const hasAnyScore =
+    has_mock_data ||
+    overall.actual > 0 ||
+    subjects.some((s) => s.actual > 0);
+  const overallPct = hasAnyScore ? overall.achievement_pct : 0;
   const gapText =
-    overall.gap <= 0
+    overall.gap <= 0 && hasAnyScore
       ? 'Target reached'
-      : has_mock_data
+      : hasAnyScore
         ? `${overall.gap} marks to go`
         : `Goal: ${overall.target} marks`;
 
   const subjectByKey = Object.fromEntries(subjects.map((s) => [s.key, s]));
+  const usingSectionalsOnly = hasAnyScore && overall.actual <= 0 && subjects.some((s) => s.actual > 0);
 
   return (
     <GlassCard className="!p-5">
@@ -61,15 +66,17 @@ function SimpleTargetPanel({ data }: { data: TargetAnalytics }) {
             Exam score targets
           </h3>
           <p className="text-xs text-slate-500 mt-1 max-w-md">
-            {has_mock_data
-              ? `Latest full mock${data.latest_mock_date ? ` · ${data.latest_mock_date}` : ''}`
+            {hasAnyScore
+              ? usingSectionalsOnly
+                ? `Latest sectional scores${data.latest_mock_date ? ` · ${data.latest_mock_date}` : ''} — log a 200-mark full mock for overall progress`
+                : `Latest mock${data.latest_mock_date ? ` · ${data.latest_mock_date}` : ''}`
               : 'Log a full mock in Analytics to see how close you are to your targets.'}
           </p>
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Overall</p>
           <p className="text-2xl font-bold text-white tabular-nums">
-            {has_mock_data ? overall.actual : '—'}
+            {overall.actual > 0 ? overall.actual : '—'}
             <span className="text-base font-normal text-slate-500">
               {' '}
               / {overall.target}
@@ -99,7 +106,7 @@ function SimpleTargetPanel({ data }: { data: TargetAnalytics }) {
           const s = subjectByKey[key];
           if (!s) return null;
           const pct = has_mock_data ? s.achievement_pct : 0;
-          const hasActual = has_mock_data && s.actual > 0;
+          const hasActual = s.actual > 0;
           return (
             <div key={key} className="rounded-xl bg-white/[0.04] border border-white/5 px-3 py-2.5">
               <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -129,7 +136,7 @@ function SimpleTargetPanel({ data }: { data: TargetAnalytics }) {
         })}
       </div>
 
-      {!has_mock_data && (
+      {!hasAnyScore && (
         <Link
           to="/analytics"
           className="mt-4 inline-flex text-xs text-blue-400 hover:text-blue-300 hover:underline"
