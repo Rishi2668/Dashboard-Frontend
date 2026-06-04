@@ -181,7 +181,7 @@ export function DashboardPage() {
 
       {stats.target_analytics && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <TargetScorePanel data={stats.target_analytics} />
+          <TargetScorePanel data={stats.target_analytics} simple />
         </motion.div>
       )}
 

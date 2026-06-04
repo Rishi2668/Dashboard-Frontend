@@ -175,11 +175,7 @@ export function FullMockAnalyticsView({
           </div>
 
           {showTarget && analytics.target_analytics && (
-            <TargetScorePanel
-              data={analytics.target_analytics}
-              hideAiInsights
-              hideWeeklyTrend
-            />
+            <TargetScorePanel data={analytics.target_analytics} simple />
           )}
 
           {analytics.section_comparison.length > 0 && (

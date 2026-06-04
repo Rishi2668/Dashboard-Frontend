@@ -143,7 +143,7 @@ export function MockAnalyticsView({
 
       {showTargetPanel && analytics.target_analytics && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <TargetScorePanel data={analytics.target_analytics} hideAiInsights hideWeeklyTrend />
+          <TargetScorePanel data={analytics.target_analytics} simple />
         </motion.div>
       )}
 
