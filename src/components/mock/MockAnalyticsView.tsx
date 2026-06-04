@@ -151,7 +151,9 @@ export function MockAnalyticsView({
 
       {!isFull && subjectTargets.length > 0 && <SectionalTargetPanel subjects={subjectTargets} />}
 
-      {!isFull && <SectionalSubjectTrendCharts trends={analytics.subject_accuracy_trends} />}
+      {!isFull && (
+        <SectionalSubjectTrendCharts trends={analytics.subject_accuracy_trends} mocks={mocks} />
+      )}
 
       {showTargetPanel && analytics.target_analytics && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>

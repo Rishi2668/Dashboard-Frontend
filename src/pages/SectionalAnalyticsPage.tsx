@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { SectionalTestForm } from '@/components/mock/SectionalTestForm';
 import { SectionalAnalyticsView } from '@/components/mock/SectionalAnalyticsView';
@@ -12,6 +13,14 @@ export function SectionalAnalyticsPage() {
   const { refreshStats } = useOutletContext<LayoutContext>();
   const { analytics, mocks, showForm, setShowForm, saving, loading, submit, deleteMock, load } =
     useMockTestAnalytics('sectional', refreshStats);
+  const [formSession, setFormSession] = useState(0);
+
+  const toggleForm = useCallback(() => {
+    setShowForm((open) => {
+      if (!open) setFormSession((n) => n + 1);
+      return !open;
+    });
+  }, [setShowForm]);
 
   if (loading && !analytics) {
     return <div className="animate-pulse h-64 bg-white/5 rounded-2xl max-w-6xl" />;
@@ -33,10 +42,17 @@ export function SectionalAnalyticsPage() {
       analytics={analytics}
       mocks={mocks}
       showForm={showForm}
-      onToggleForm={() => setShowForm(!showForm)}
+      onToggleForm={toggleForm}
       onDelete={deleteMock}
       formSlot={
-        <SectionalTestForm onSubmit={submit} onCancel={() => setShowForm(false)} saving={saving} />
+        showForm ? (
+          <SectionalTestForm
+            key={`sectional-form-${formSession}`}
+            onSubmit={submit}
+            onCancel={() => setShowForm(false)}
+            saving={saving}
+          />
+        ) : null
       }
     />
   );

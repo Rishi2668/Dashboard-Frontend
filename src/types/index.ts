@@ -109,6 +109,8 @@ export interface MockTest {
   test_name: string | null;
   test_date: string;
   test_type: string;
+  section_subject?: string | null;
+  created_at?: string;
   total_score: number;
   max_score: number;
   total_questions: number;
@@ -167,7 +169,17 @@ export interface MockAnalytics {
     total_questions?: number;
     score_percentage?: number;
   }[];
-  subject_accuracy_trends: Record<string, { date: string; accuracy: number; score: number }[]>;
+  subject_accuracy_trends: Record<
+    string,
+    {
+      date: string;
+      accuracy: number;
+      score: number;
+      max_score?: number;
+      name?: string;
+      mock_id?: number;
+    }[]
+  >;
   weekly_trend: { week: string; avg_score: number }[];
   weak_subjects: { subject: string; accuracy: number; priority: string }[];
   strongest_subject: string | null;

@@ -1,17 +1,15 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
+  BarChart,
+  Bar,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  ReferenceLine,
+  XAxis,
+  YAxis,
 } from 'recharts';
+import { SectionalTrendChart } from '@/components/mock/SectionalTrendChart';
 import { format } from 'date-fns';
 import {
   Brain,
@@ -26,7 +24,12 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DeferredRender } from '@/components/perf/DeferredRender';
 import { MOCK_SUBJECTS } from '@/lib/mockCalculations';
-import { filterMocksByType, primarySubject } from '@/lib/mockClassification';
+import { filterMocksByType } from '@/lib/mockClassification';
+import {
+  compareSectionalMocks,
+  getSectionalMarks,
+  sectionalSubjectKey,
+} from '@/lib/sectionalMarks';
 import type { MockAnalytics, MockTest, SectionalSubjectTarget } from '@/types';
 import type { SubjectKey } from '@/lib/mockCalculations';
 import { cn } from '@/lib/utils';
@@ -74,23 +77,37 @@ export function SectionalAnalyticsView({
 
   const subjectMocks = useMemo(
     () =>
-      sectionalMocks.filter((m) => primarySubject(m) === activeSubject).sort(
-        (a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime()
-      ),
+      sectionalMocks
+        .filter((m) => sectionalSubjectKey(m) === activeSubject)
+        .sort(compareSectionalMocks),
     [sectionalMocks, activeSubject]
   );
 
   const meta = MOCK_SUBJECTS.find((s) => s.key === activeSubject)!;
   const target = targetMap[activeSubject];
-  const trend = analytics.subject_accuracy_trends[activeSubject] ?? [];
   const latest = subjectMocks[0];
-  const latestScore = latest ? latest[primarySubject(latest)!]?.secured_marks ?? latest.total_score : 0;
-  const latestMax = latest ? latest[primarySubject(latest)!]?.max_marks ?? latest.max_score : 50;
+  const latestMarks = latest ? getSectionalMarks(latest, activeSubject) : null;
+  const latestScore = latestMarks?.secured ?? 0;
+  const latestMax = latestMarks?.max ?? 50;
 
-  const chartData = trend.map((p) => ({
-    ...p,
-    targetLine: target?.target ?? 45,
-  }));
+  /** Chart from saved mocks (not analytics cache) — one point per attempt, unique x labels. */
+  const chartData = useMemo(() => {
+    const chronological = [...subjectMocks].sort((a, b) => -compareSectionalMocks(a, b));
+    return chronological.map((m, idx) => {
+      const marks = getSectionalMarks(m, activeSubject);
+      const shortDate = format(new Date(m.test_date), 'MMM d, yyyy');
+      const title = m.test_name?.trim();
+      return {
+        id: m.id,
+        date: m.test_date,
+        label: title ? `${shortDate} (#${idx + 1} · ${title})` : `${shortDate} (#${idx + 1})`,
+        score: marks.secured,
+        accuracy: marks.accuracy,
+        max_score: marks.max,
+        name: title,
+      };
+    });
+  }, [subjectMocks, activeSubject]);
 
   return (
     <motion.div className="space-y-6 max-w-6xl" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -126,7 +143,7 @@ export function SectionalAnalyticsView({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {MOCK_SUBJECTS.map(({ key, short, color }) => {
           const t = targetMap[key];
-          const count = sectionalMocks.filter((m) => primarySubject(m) === key).length;
+          const count = sectionalMocks.filter((m) => sectionalSubjectKey(m) === key).length;
           const isActive = activeSubject === key;
           return (
             <button
@@ -246,6 +263,9 @@ export function SectionalAnalyticsView({
                 </span>
               )}
             </div>
+            <p className="text-[10px] text-slate-500 mb-3 -mt-2">
+              Solid = marks (left). Dashed green = accuracy % (right). Legend at top of chart.
+            </p>
             {chartData.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-slate-500 text-sm">No {meta.short} sectionals yet</p>
@@ -258,40 +278,13 @@ export function SectionalAnalyticsView({
                 </button>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} />
-                  <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                  {target && (
-                    <ReferenceLine
-                      y={target.target}
-                      stroke="#a855f7"
-                      strokeDasharray="6 4"
-                      label={{ value: 'Target', fill: '#c4b5fd', fontSize: 10 }}
-                    />
-                  )}
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    name="Marks"
-                    stroke={SUBJECT_COLORS[activeSubject]}
-                    strokeWidth={3}
-                    dot={{ r: 5, fill: SUBJECT_COLORS[activeSubject] }}
-                    activeDot={{ r: 7 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="accuracy"
-                    name="Accuracy %"
-                    stroke="#94a3b8"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    yAxisId={undefined}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <SectionalTrendChart
+                data={chartData}
+                height={300}
+                marksColor={SUBJECT_COLORS[activeSubject]}
+                targetMarks={target?.target}
+                showTargetLine={!!target}
+              />
             )}
           </GlassCard>
           </DeferredRender>
@@ -374,9 +367,8 @@ export function SectionalAnalyticsView({
             ) : (
               <div className="space-y-2">
                 {subjectMocks.map((m) => {
-                  const pk = primarySubject(m)!;
-                  const sec = m[pk];
-                  const gap = target ? Math.max(0, target.target - sec.secured_marks) : 0;
+                  const marks = getSectionalMarks(m, activeSubject);
+                  const gap = target ? Math.max(0, target.target - marks.secured) : 0;
                   return (
                     <motion.div
                       key={m.id}
@@ -393,9 +385,9 @@ export function SectionalAnalyticsView({
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold text-white">
-                          {sec.secured_marks}/{sec.max_marks}
+                          {marks.secured}/{marks.max}
                         </span>
-                        <span className="text-xs text-slate-400">{sec.accuracy?.toFixed(0)}% acc</span>
+                        <span className="text-xs text-slate-400">{marks.accuracy?.toFixed(0)}% acc</span>
                       </div>
                       {target && (
                         <span

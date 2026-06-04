@@ -45,6 +45,8 @@ export function filterMocksByType(mocks: MockTest[], type: 'full' | 'sectional')
 }
 
 export function primarySubject(m: MockTest): (typeof KEYS)[number] | null {
+  const stored = m.section_subject as (typeof KEYS)[number] | undefined;
+  if (stored && KEYS.includes(stored)) return stored;
   const active = activeSubjects(m);
   return active.length === 1 ? active[0] : null;
 }

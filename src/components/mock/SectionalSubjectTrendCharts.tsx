@@ -1,23 +1,14 @@
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
+import { format } from 'date-fns';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { MOCK_SUBJECTS } from '@/lib/mockCalculations';
-import type { MockAnalytics } from '@/types';
-
-const chartTooltipStyle = {
-  background: '#1a1a24',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '8px',
-  color: '#fff',
-};
+import { SectionalTrendChart } from '@/components/mock/SectionalTrendChart';
+import { filterMocksByType } from '@/lib/mockClassification';
+import {
+  compareSectionalMocks,
+  getSectionalMarks,
+  sectionalSubjectKey,
+} from '@/lib/sectionalMarks';
+import type { MockAnalytics, MockTest } from '@/types';
 
 const COLORS: Record<string, string> = {
   reasoning: '#a855f7',
@@ -28,18 +19,58 @@ const COLORS: Record<string, string> = {
 
 interface SectionalSubjectTrendChartsProps {
   trends: MockAnalytics['subject_accuracy_trends'];
+  mocks?: MockTest[];
 }
 
-export function SectionalSubjectTrendCharts({ trends }: SectionalSubjectTrendChartsProps) {
+function chartDataForSubject(mocks: MockTest[], key: string) {
+  const chronological = mocks
+    .filter((m) => sectionalSubjectKey(m) === key)
+    .sort((a, b) => -compareSectionalMocks(a, b));
+  return chronological.map((m, idx) => {
+    const marks = getSectionalMarks(m, key as (typeof MOCK_SUBJECTS)[number]['key']);
+    const shortDate = format(new Date(m.test_date), 'MMM d, yyyy');
+    const title = m.test_name?.trim();
+    return {
+      id: m.id,
+      date: m.test_date,
+      label: title ? `${shortDate} (#${idx + 1} · ${title})` : `${shortDate} (#${idx + 1})`,
+      score: marks.secured,
+      accuracy: marks.accuracy,
+      max_score: marks.max,
+      name: title,
+    };
+  });
+}
+
+export function SectionalSubjectTrendCharts({ trends, mocks }: SectionalSubjectTrendChartsProps) {
+  const sectionalMocks = mocks ? filterMocksByType(mocks, 'sectional') : [];
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-white">Per-subject sectional trends</h3>
       <p className="text-xs text-slate-500 -mt-2">
-        Separate score & accuracy history for each subject — not mixed with full mocks.
+        Solid line = marks (left axis). Dashed green = accuracy % (right axis). Each chart is separate
+        from full mocks.
       </p>
       <div className="grid lg:grid-cols-2 gap-4">
         {MOCK_SUBJECTS.map(({ key, label, short }) => {
-          const data = trends[key] ?? [];
+          const data =
+            sectionalMocks.length > 0
+              ? chartDataForSubject(sectionalMocks, key)
+              : (trends[key] ?? []).map((p, idx) => {
+                  const shortDate = format(new Date(p.date), 'MMM d, yyyy');
+                  const title = p.name?.trim();
+                  return {
+                    id: p.mock_id,
+                    date: p.date,
+                    label: title
+                      ? `${shortDate} (#${idx + 1} · ${title})`
+                      : `${shortDate} (#${idx + 1})`,
+                    score: p.score,
+                    accuracy: p.accuracy,
+                    max_score: p.max_score,
+                    name: title,
+                  };
+                });
           return (
             <GlassCard key={key} className="!p-4">
               <h4 className="text-sm font-medium text-white mb-1">{label}</h4>
@@ -47,35 +78,7 @@ export function SectionalSubjectTrendCharts({ trends }: SectionalSubjectTrendCha
               {data.length === 0 ? (
                 <p className="text-xs text-slate-500 py-8 text-center">No {short} sectionals yet</p>
               ) : (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                    <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} />
-                    <YAxis yAxisId="score" tick={{ fill: '#64748b', fontSize: 9 }} />
-                    <YAxis yAxisId="acc" orientation="right" domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 9 }} />
-                    <Tooltip contentStyle={chartTooltipStyle} />
-                    <Legend wrapperStyle={{ fontSize: 10 }} />
-                    <Line
-                      yAxisId="score"
-                      type="monotone"
-                      dataKey="score"
-                      name="Marks"
-                      stroke={COLORS[key]}
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                    <Line
-                      yAxisId="acc"
-                      type="monotone"
-                      dataKey="accuracy"
-                      name="Accuracy %"
-                      stroke="#94a3b8"
-                      strokeWidth={2}
-                      strokeDasharray="4 4"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <SectionalTrendChart data={data} height={220} marksColor={COLORS[key]} />
               )}
             </GlassCard>
           );
