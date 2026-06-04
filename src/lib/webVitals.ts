@@ -26,7 +26,18 @@ function sendMetric(payload: MetricPayload) {
   }).catch(() => {});
 }
 
-export function initWebVitals() {
+async function endpointAvailable(): Promise<boolean> {
+  try {
+    const res = await fetch(WEB_VITALS_URL, { method: 'GET' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function initWebVitals() {
+  const ok = await endpointAvailable();
+  if (!ok) return;
   const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
   const navType = nav?.type ?? 'navigate';
 

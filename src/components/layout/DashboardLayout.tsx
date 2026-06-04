@@ -28,7 +28,10 @@ export function DashboardLayout() {
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });
-  const refreshStats = () => queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+  const refreshStats = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['target-analytics'] });
+  };
   const setStats = (next: DashboardStats) => queryClient.setQueryData(['dashboard-stats'], next);
 
   useEffect(() => {

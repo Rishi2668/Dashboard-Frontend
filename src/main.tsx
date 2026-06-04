@@ -19,7 +19,7 @@ function getInitialTheme(): Theme {
 }
 
 applyTheme(getInitialTheme());
-initWebVitals();
+void initWebVitals();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

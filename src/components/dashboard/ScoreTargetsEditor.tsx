@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Save, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { scoreTargetsApi, dashboardApi } from '@/api';
@@ -42,6 +43,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 export function ScoreTargetsEditor({ stats, onUpdated }: ScoreTargetsEditorProps) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -60,6 +62,7 @@ export function ScoreTargetsEditor({ stats, onUpdated }: ScoreTargetsEditorProps
         Object.entries(form).map(([k, v]) => [k, parseFloat(v) || 0])
       ) as unknown as ScoreTarget;
       await scoreTargetsApi.update(payload);
+      await queryClient.invalidateQueries({ queryKey: ['target-analytics'] });
       const { data: newStats } = await dashboardApi.stats();
       onUpdated?.(newStats);
       toast.success('Target scores saved');

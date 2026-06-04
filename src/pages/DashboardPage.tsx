@@ -17,7 +17,8 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { StudyHeatmap } from '@/components/charts/StudyHeatmap';
-import { studyApi } from '@/api';
+import { scoreTargetsApi, studyApi } from '@/api';
+import { useQuery } from '@tanstack/react-query';
 import { apiError } from '@/lib/apiError';
 import { ExamTargetsEditor } from '@/components/dashboard/ExamTargetsEditor';
 import { ScoreTargetsEditor } from '@/components/dashboard/ScoreTargetsEditor';
@@ -38,6 +39,13 @@ interface OutletContext {
 export function DashboardPage() {
   const { stats, setStats, refreshStats } = useOutletContext<OutletContext>();
   const { features, checked } = useBackendFeatures();
+
+  const { data: targetAnalytics } = useQuery({
+    queryKey: ['target-analytics'],
+    queryFn: async () => (await scoreTargetsApi.analytics()).data,
+    staleTime: 30_000,
+    enabled: !!stats,
+  });
   const canDeleteStudy =
     stats?.api_features?.study_session_delete === true || features.study_session_delete;
   const [sessions, setSessions] = useState<StudySession[]>([]);
@@ -169,7 +177,13 @@ export function DashboardPage() {
       </motion.div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Current Mock" value={user.current_mock_score.toFixed(0)} icon={TrendingUp} color="blue" delay={0.1} />
+        <StatCard
+          label="Current Mock"
+          value={user.current_mock_score > 0 ? user.current_mock_score.toFixed(0) : '—'}
+          icon={TrendingUp}
+          color="blue"
+          delay={0.1}
+        />
         <StatCard label="Best Score" value={user.best_score.toFixed(0)} icon={Trophy} color="orange" delay={0.15} />
         <StatCard label="Accuracy" value={`${user.overall_accuracy.toFixed(1)}%`} icon={Target} color="green" delay={0.2} />
         <StatCard label="Days Left" value={stats.days_left} icon={Calendar} color="purple" trend="Until exam" delay={0.25} />
@@ -179,9 +193,9 @@ export function DashboardPage() {
         <StatCard label="Consistency" value={`${stats.month_consistency}%`} icon={Award} color="purple" delay={0.45} />
       </div>
 
-      {stats.target_analytics && (
+      {targetAnalytics && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <TargetScorePanel data={stats.target_analytics} simple />
+          <TargetScorePanel data={targetAnalytics} simple />
         </motion.div>
       )}
 
