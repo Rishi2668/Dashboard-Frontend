@@ -48,8 +48,7 @@ export function SectionalSubjectTrendCharts({ trends, mocks }: SectionalSubjectT
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-white">Per-subject sectional trends</h3>
       <p className="text-xs text-slate-500 -mt-2">
-        Solid line = marks (left axis). Dashed green = accuracy % (right axis). Each chart is separate
-        from full mocks.
+        Hover or tap attempts to compare marks and accuracy. Toggle bar/line view per subject.
       </p>
       <div className="grid lg:grid-cols-2 gap-4">
         {MOCK_SUBJECTS.map(({ key, label, short }) => {
@@ -78,7 +77,12 @@ export function SectionalSubjectTrendCharts({ trends, mocks }: SectionalSubjectT
               {data.length === 0 ? (
                 <p className="text-xs text-slate-500 py-8 text-center">No {short} sectionals yet</p>
               ) : (
-                <SectionalTrendChart data={data} height={220} marksColor={COLORS[key]} />
+                <SectionalTrendChart
+                  data={data}
+                  height={320}
+                  marksColor={COLORS[key]}
+                  subjectLabel={short}
+                />
               )}
             </GlassCard>
           );

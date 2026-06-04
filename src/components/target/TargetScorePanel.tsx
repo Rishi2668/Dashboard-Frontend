@@ -28,9 +28,11 @@ interface TargetScorePanelProps {
   compact?: boolean;
   /** Hide AI block when insights are shown in mock analytics combined section */
   hideAiInsights?: boolean;
+  /** Hide weekly line chart (shown in unified mock trend chart instead) */
+  hideWeeklyTrend?: boolean;
 }
 
-export function TargetScorePanel({ data, compact, hideAiInsights }: TargetScorePanelProps) {
+export function TargetScorePanel({ data, compact, hideAiInsights, hideWeeklyTrend }: TargetScorePanelProps) {
   const { overall, subjects, ai_insights } = data;
   const subjectChartData = subjects.map((s) => ({
     name: s.label.split(' ')[0],
@@ -130,9 +132,9 @@ export function TargetScorePanel({ data, compact, hideAiInsights }: TargetScoreP
         ))}
       </div>
 
-      {(weeklyTrend.length > 0 || subjectChartData.length > 0) && (
+      {((!hideWeeklyTrend && weeklyTrend.length > 0) || subjectChartData.length > 0) && (
         <div className="grid lg:grid-cols-2 gap-4">
-          {weeklyTrend.length > 0 && (
+          {!hideWeeklyTrend && weeklyTrend.length > 0 && (
             <GlassCard>
               <h4 className="text-sm font-semibold text-white mb-3">Weekly target tracking</h4>
               <ResponsiveContainer width="100%" height={220}>

@@ -263,9 +263,6 @@ export function SectionalAnalyticsView({
                 </span>
               )}
             </div>
-            <p className="text-[10px] text-slate-500 mb-3 -mt-2">
-              Solid = marks (left). Dashed green = accuracy % (right). Legend at top of chart.
-            </p>
             {chartData.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-slate-500 text-sm">No {meta.short} sectionals yet</p>
@@ -280,10 +277,11 @@ export function SectionalAnalyticsView({
             ) : (
               <SectionalTrendChart
                 data={chartData}
-                height={300}
+                height={340}
                 marksColor={SUBJECT_COLORS[activeSubject]}
                 targetMarks={target?.target}
                 showTargetLine={!!target}
+                subjectLabel={meta.short}
               />
             )}
           </GlassCard>

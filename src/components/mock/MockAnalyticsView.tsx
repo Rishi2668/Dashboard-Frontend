@@ -1,20 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  Radar,
-  Legend,
-} from 'recharts';
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts';
+import { SectionalTrendChart } from '@/components/mock/SectionalTrendChart';
+import { buildTrendChartDataFromMocks } from '@/lib/mockTrendData';
+import { Sparkles, Target as TargetIcon } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { StatCard } from '@/components/ui/StatCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
@@ -36,13 +24,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { filterMocksByType, isSectionalShapedOverall } from '@/lib/mockClassification';
 import { useMemo, type ReactNode } from 'react';
-
-const chartTooltipStyle = {
-  background: '#1a1a24',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '8px',
-  color: '#fff',
-};
 
 export interface MockAnalyticsViewProps {
   mode: 'full' | 'sectional';
@@ -101,6 +82,11 @@ export function MockAnalyticsView({
   const mockInsights = analytics.ai_insights ?? [];
   const targetInsights = hasFullMocks ? (analytics.target_insights ?? []) : [];
   const subjectTargets = analytics.subject_targets ?? [];
+  const fullMockChartData = useMemo(
+    () => (isFull ? buildTrendChartDataFromMocks(displayMocks) : []),
+    [isFull, displayMocks]
+  );
+  const overallTarget = analytics.target_analytics?.overall?.target;
 
   const renderInsightCards = (items: typeof mockInsights, accent?: 'target' | 'mock' | 'sectional') => (
     <div className="grid sm:grid-cols-2 gap-2">
@@ -157,7 +143,7 @@ export function MockAnalyticsView({
 
       {showTargetPanel && analytics.target_analytics && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <TargetScorePanel data={analytics.target_analytics} hideAiInsights />
+          <TargetScorePanel data={analytics.target_analytics} hideAiInsights hideWeeklyTrend />
         </motion.div>
       )}
 
@@ -280,60 +266,43 @@ export function MockAnalyticsView({
       </div>
       )}
 
-      {isFull && hasFullMocks && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          <GlassCard>
-            <h3 className="font-semibold text-white mb-4">Score progression</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={analytics.score_progression}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip contentStyle={chartTooltipStyle} />
-                <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </GlassCard>
+      {isFull && hasFullMocks && fullMockChartData.length > 0 && (
+        <GlassCard className="!p-0 overflow-hidden border border-blue-500/25 shadow-xl shadow-blue-500/10">
+          <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-blue-600/25 via-indigo-600/15 to-transparent">
+            <p className="text-[10px] uppercase tracking-widest text-blue-300/90 flex items-center gap-1.5">
+              <Sparkles size={12} /> Performance timeline
+            </p>
+            <h3 className="text-lg font-bold text-white mt-0.5">Full mock trends</h3>
+            {overallTarget != null && (
+              <p className="text-xs text-blue-200 mt-1 flex items-center gap-1">
+                <TargetIcon size={12} /> Target: {overallTarget} marks
+              </p>
+            )}
+          </div>
+          <div className="p-4 sm:p-5">
+            <SectionalTrendChart
+              data={fullMockChartData}
+              height={380}
+              marksColor="#3b82f6"
+              targetMarks={overallTarget}
+              showTargetLine={overallTarget != null}
+              subjectLabel="Full mock"
+            />
+          </div>
+        </GlassCard>
+      )}
 
-          <GlassCard>
-            <h3 className="font-semibold text-white mb-4">Accuracy trend</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={analytics.accuracy_trend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip contentStyle={chartTooltipStyle} />
-                <Line type="monotone" dataKey="accuracy" stroke="#22c55e" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </GlassCard>
-
-          <GlassCard>
-            <h3 className="font-semibold text-white mb-4">Subject comparison (latest full mock)</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={analytics.section_comparison}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip contentStyle={chartTooltipStyle} />
-                <Legend />
-                <Bar dataKey="score" name="Marks" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="accuracy" name="Accuracy %" fill="#22c55e" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </GlassCard>
-
-          <GlassCard>
-            <h3 className="font-semibold text-white mb-4">Section radar</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <RadarChart data={analytics.section_comparison}>
-                <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <Radar dataKey="accuracy" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.35} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </GlassCard>
-        </div>
+      {isFull && hasFullMocks && analytics.section_comparison.length > 0 && (
+        <GlassCard>
+          <h3 className="font-semibold text-white mb-4">Section radar (latest mock)</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <RadarChart data={analytics.section_comparison}>
+              <PolarGrid stroke="rgba(255,255,255,0.1)" />
+              <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <Radar dataKey="accuracy" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.35} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </GlassCard>
       )}
 
       {isFull && analytics.total_mocks === 0 && displayMocks.length === 0 && (

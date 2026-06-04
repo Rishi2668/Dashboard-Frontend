@@ -1,21 +1,11 @@
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend,
-} from 'recharts';
 import { format } from 'date-fns';
 import {
   BarChart3,
   Brain,
   Plus,
+  Sparkles,
   Target,
   TrendingUp,
   Trash2,
@@ -25,17 +15,14 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { StatCard } from '@/components/ui/StatCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { TargetScorePanel } from '@/components/target/TargetScorePanel';
+import { SectionalTrendChart } from '@/components/mock/SectionalTrendChart';
 import { DeferredRender } from '@/components/perf/DeferredRender';
+import { buildTrendChartDataFromMocks } from '@/lib/mockTrendData';
 import type { MockAnalytics, MockTest } from '@/types';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
-const chartTooltipStyle = {
-  background: '#1a1a24',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '8px',
-  color: '#fff',
-};
+const FULL_MOCK_COLOR = '#3b82f6';
 
 interface FullMockAnalyticsViewProps {
   analytics: MockAnalytics;
@@ -60,9 +47,11 @@ export function FullMockAnalyticsView({
     analytics.target_analytics?.has_mock_data &&
     (analytics.target_analytics.overall.actual_max ?? 0) >= 100;
 
+  const overallTarget = analytics.target_analytics?.overall?.target;
+  const chartData = useMemo(() => buildTrendChartDataFromMocks(mocks), [mocks]);
+
   return (
     <motion.div className="space-y-6 max-w-6xl" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      {/* Header */}
       <motion.div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -97,8 +86,8 @@ export function FullMockAnalyticsView({
           </div>
           <h2 className="text-lg font-semibold text-white">No full mocks yet</h2>
           <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-            Log a 200-mark mock with Reasoning, Quant, English & GK to see score trends, section
-            breakdown, and target comparison.
+            Log a 200-mark mock with Reasoning, Quant, English & GK to see your interactive performance
+            timeline and target comparison.
           </p>
           <button
             type="button"
@@ -113,7 +102,45 @@ export function FullMockAnalyticsView({
         </GlassCard>
       ) : (
         <>
-          {/* Stats */}
+          {/* Hero — interactive full mock trend (replaces score progression + accuracy + weekly) */}
+          <DeferredRender minHeight={420}>
+            <GlassCard className="!p-0 overflow-hidden border border-blue-500/25 shadow-xl shadow-blue-500/10">
+              <div className="relative px-5 py-4 border-b border-white/10 bg-gradient-to-r from-blue-600/25 via-indigo-600/15 to-transparent">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                <div className="relative flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-blue-300/90 flex items-center gap-1.5">
+                      <Sparkles size={12} /> Performance timeline
+                    </p>
+                    <h2 className="text-xl font-bold text-white mt-0.5">Full mock trends</h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {mocks.length} attempt{mocks.length !== 1 ? 's' : ''} · hover, click bars, or use chips below
+                    </p>
+                  </div>
+                  {overallTarget != null && (
+                    <span className="text-xs text-blue-200 flex items-center gap-1.5 bg-blue-500/15 border border-blue-500/30 px-3 py-1.5 rounded-full">
+                      <Target size={12} /> Overall target: {overallTarget} marks
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="p-4 sm:p-5">
+                {chartData.length > 0 ? (
+                  <SectionalTrendChart
+                    data={chartData}
+                    height={380}
+                    marksColor={FULL_MOCK_COLOR}
+                    targetMarks={overallTarget}
+                    showTargetLine={overallTarget != null}
+                    subjectLabel="Full mock"
+                  />
+                ) : (
+                  <p className="text-sm text-slate-500 py-16 text-center">Add mocks to see your trend</p>
+                )}
+              </div>
+            </GlassCard>
+          </DeferredRender>
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard
               label="Latest score"
@@ -148,10 +175,13 @@ export function FullMockAnalyticsView({
           </div>
 
           {showTarget && analytics.target_analytics && (
-            <TargetScorePanel data={analytics.target_analytics} hideAiInsights />
+            <TargetScorePanel
+              data={analytics.target_analytics}
+              hideAiInsights
+              hideWeeklyTrend
+            />
           )}
 
-          {/* Section breakdown */}
           {analytics.section_comparison.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-white mb-3">Latest mock — section breakdown</h3>
@@ -177,97 +207,28 @@ export function FullMockAnalyticsView({
             </div>
           )}
 
-          {/* Charts */}
-          <DeferredRender minHeight={300}>
-          <div className="grid lg:grid-cols-2 gap-4">
-            <GlassCard className="!p-4">
-              <h3 className="font-semibold text-white mb-3">Score progression</h3>
-              {analytics.score_progression.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={analytics.score_progression}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} />
-                    <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                    <Tooltip contentStyle={chartTooltipStyle} />
-                    <Line
-                      type="monotone"
-                      dataKey="score"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      dot={{ fill: '#3b82f6', r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm text-slate-500 py-12 text-center">Add more mocks to see trends</p>
-              )}
-            </GlassCard>
-
-            <GlassCard className="!p-4">
-              <h3 className="font-semibold text-white mb-3">Accuracy trend</h3>
-              {analytics.accuracy_trend.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={analytics.accuracy_trend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} />
-                    <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10 }} />
-                    <Tooltip contentStyle={chartTooltipStyle} />
-                    <Line
-                      type="monotone"
-                      dataKey="accuracy"
-                      stroke="#22c55e"
-                      strokeWidth={2}
-                      dot={{ fill: '#22c55e', r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm text-slate-500 py-12 text-center">Add more mocks to see trends</p>
-              )}
-            </GlassCard>
-
-            {analytics.section_comparison.length > 0 && (
-              <GlassCard className="!p-4 lg:col-span-2">
-                <h3 className="font-semibold text-white mb-3">Subject marks (latest mock)</h3>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={analytics.section_comparison}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                    <XAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
-                    <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                    <Tooltip contentStyle={chartTooltipStyle} />
-                    <Legend />
-                    <Bar dataKey="score" name="Marks" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </GlassCard>
-            )}
-          </div>
-          </DeferredRender>
-
-          {/* AI */}
           {(analytics.ai_insights?.length ?? 0) > 0 && (
             <DeferredRender minHeight={180}>
-            <GlassCard className="!p-4">
-              <h3 className="font-semibold text-white flex items-center gap-2 mb-3">
-                <Brain size={18} className="text-blue-400" />
-                Insights
-              </h3>
-              <div className="grid sm:grid-cols-2 gap-2">
-                {analytics.ai_insights.map((ins, i) => (
-                  <div
-                    key={i}
-                    className="p-3 rounded-xl text-sm border bg-white/5 border-white/10"
-                  >
-                    <p className="font-medium text-white">{ins.title}</p>
-                    <p className="text-slate-400 text-xs mt-1">{ins.message}</p>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
+              <GlassCard className="!p-4">
+                <h3 className="font-semibold text-white flex items-center gap-2 mb-3">
+                  <Brain size={18} className="text-blue-400" />
+                  Insights
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {analytics.ai_insights.map((ins, i) => (
+                    <div
+                      key={i}
+                      className="p-3 rounded-xl text-sm border bg-white/5 border-white/10"
+                    >
+                      <p className="font-medium text-white">{ins.title}</p>
+                      <p className="text-slate-400 text-xs mt-1">{ins.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
             </DeferredRender>
           )}
 
-          {/* History */}
           <GlassCard className="!p-4">
             <h3 className="font-semibold text-white mb-3">Mock history ({mocks.length})</h3>
             <div className="overflow-x-auto">
