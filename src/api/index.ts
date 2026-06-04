@@ -68,11 +68,20 @@ export const mockApi = {
   delete: (id: number) => api.delete(`/mock-tests/${id}`),
 };
 
+export type NotePayload = {
+  title: string;
+  content?: string;
+  note_type?: string;
+  tags?: string | null;
+  is_mistake?: boolean;
+  subject?: string | null;
+};
+
 export const notesApi = {
   list: (params?: { search?: string; note_type?: string; subject?: string; is_mistake?: boolean }) =>
     api.get<Note[]>('/notes/', { params }),
-  create: (data: Partial<Note>) => api.post<Note>('/notes/', data),
-  update: (id: number, data: Partial<Note>) => api.patch<Note>(`/notes/${id}`, data),
+  create: (data: NotePayload) => api.post<Note>('/notes/', data),
+  update: (id: number, data: Partial<NotePayload>) => api.patch<Note>(`/notes/${id}`, data),
   delete: (id: number) => api.delete(`/notes/${id}`),
 };
 

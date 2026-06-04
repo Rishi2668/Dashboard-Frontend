@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, BookMarked } from 'lucide-react';
+import { Search, Plus, BookMarked, Trash2 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { notesApi } from '@/api';
+import { apiError } from '@/lib/apiError';
 import type { Note } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -20,9 +21,13 @@ export function NotesPage() {
       .list({
         search: search || undefined,
         note_type: filter || undefined,
-        is_mistake: mistakeOnly || undefined,
+        is_mistake: mistakeOnly ? true : undefined,
       })
-      .then((r) => setNotes(r.data));
+      .then((r) => setNotes(r.data))
+      .catch((err) => {
+        toast.error(apiError(err, 'Could not load notes'));
+        setNotes([]);
+      });
   };
 
   useEffect(() => {
@@ -30,19 +35,44 @@ export function NotesPage() {
     return () => clearTimeout(t);
   }, [search, filter, mistakeOnly]);
 
+  const notePayload = (n: Partial<Note>) => ({
+    title: (n.title ?? '').trim(),
+    content: n.content ?? '',
+    note_type: n.note_type ?? 'general',
+    tags: n.tags ?? null,
+    is_mistake: n.is_mistake ?? false,
+    subject: n.subject ?? null,
+  });
+
   const save = async () => {
-    if (!editing?.title) return;
+    const title = editing?.title?.trim();
+    if (!title) {
+      toast.error('Title is required');
+      return;
+    }
     try {
-      if (editing.id) {
-        await notesApi.update(editing.id, editing);
+      if (editing?.id) {
+        await notesApi.update(editing.id, notePayload(editing));
       } else {
-        await notesApi.create(editing);
+        await notesApi.create(notePayload(editing!));
       }
-      toast.success('Note saved');
+      toast.success(editing?.is_mistake ? 'Mistake journal entry saved' : 'Note saved');
       setEditing(null);
       load();
-    } catch {
-      toast.error('Failed to save');
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to save note'));
+    }
+  };
+
+  const remove = async (id: number) => {
+    if (!window.confirm('Delete this note?')) return;
+    try {
+      await notesApi.delete(id);
+      toast.success('Deleted');
+      if (editing?.id === id) setEditing(null);
+      load();
+    } catch (err) {
+      toast.error(apiError(err, 'Could not delete'));
     }
   };
 
@@ -137,20 +167,42 @@ export function NotesPage() {
       )}
 
       <div className="grid gap-3">
+        {notes.length === 0 && !editing && (
+          <p className="text-center text-slate-500 text-sm py-12">
+            No notes yet. Add formulas, vocabulary, or mistake journal entries.
+          </p>
+        )}
         {notes.map((n) => (
-          <GlassCard key={n.id} hover onClick={() => setEditing(n)} className="!p-4 cursor-pointer">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
+          <GlassCard key={n.id} hover className="!p-4">
+            <div className="flex items-start justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(n)}
+                className="flex-1 text-left min-w-0"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-white">{n.title}</h3>
                   {n.is_mistake && (
-                    <span className="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full">Mistake</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full">
+                      Mistake
+                    </span>
                   )}
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">{n.note_type}</p>
-              </div>
+                <p className="text-sm text-slate-400 mt-2 line-clamp-2">{n.content}</p>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void remove(n.id);
+                }}
+                className="p-2 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 shrink-0"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
-            <p className="text-sm text-slate-400 mt-2 line-clamp-2">{n.content}</p>
           </GlassCard>
         ))}
       </div>
