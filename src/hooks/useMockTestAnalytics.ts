@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { mockApi } from '@/api';
+import { mockApi, roadmap2026Api } from '@/api';
 import { apiError } from '@/lib/apiError';
 import { filterMocksByType } from '@/lib/mockClassification';
+import { consumeRoadmapMockIntent } from '@/lib/roadmapMockFlow';
 import type { MockAnalytics } from '@/types';
 import type { MockTestFormPayload } from '@/components/mock/MockTestForm';
 import toast from 'react-hot-toast';
@@ -56,10 +57,34 @@ export function useMockTestAnalytics(testType: 'full' | 'sectional', onSaved?: (
         english: toSectionPayload(payload.english),
         gk: toSectionPayload(payload.gk),
       }),
-    onSuccess: async () => {
+    onSuccess: async (_data, payload) => {
       toast.success(testType === 'full' ? 'Full mock saved!' : 'Sectional saved!');
       setShowForm(false);
       await queryClient.invalidateQueries({ queryKey: ['mock-analytics', testType] });
+      await queryClient.invalidateQueries({ queryKey: ['target-analytics'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+
+      if (testType === 'full') {
+        const intent = consumeRoadmapMockIntent();
+        if (intent) {
+          const attempted = payload.attempted || 0;
+          const correct = payload.correct || 0;
+          const accuracy =
+            attempted > 0 ? Math.round((correct / attempted) * 1000) / 10 : undefined;
+          try {
+            await roadmap2026Api.updateTask(intent.week, intent.taskKey, {
+              completed: true,
+              score: payload.total_score,
+              accuracy: typeof accuracy === 'number' ? accuracy : undefined,
+            });
+            await queryClient.invalidateQueries({ queryKey: ['roadmap-2026'] });
+            toast.success('Roadmap updated — mock marked complete');
+          } catch {
+            /* mock saved; roadmap sync optional */
+          }
+        }
+      }
+
       onSaved?.();
     },
     onError: (err) => {

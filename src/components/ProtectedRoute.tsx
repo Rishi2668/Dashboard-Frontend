@@ -3,22 +3,29 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, fetchUser } = useAuthStore();
+  const { isAuthenticated, isLoading, user, fetchUser } = useAuthStore();
   const location = useLocation();
+  const hasToken = !!localStorage.getItem('access_token');
 
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    if (hasToken) {
+      void fetchUser();
+    }
+  }, [fetchUser, hasToken]);
 
-  if (isLoading) {
+  if (!hasToken && !isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (isLoading && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
-        <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-app">
+        <div className="page-spinner" aria-label="Loading" />
       </div>
     );
   }
 
-  if (!isAuthenticated && !localStorage.getItem('access_token')) {
+  if (!isAuthenticated && !hasToken) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

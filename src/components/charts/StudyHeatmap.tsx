@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { subDays, format, eachDayOfInterval } from 'date-fns';
 
 interface HeatmapProps {
@@ -32,15 +31,12 @@ export function StudyHeatmap({ data }: HeatmapProps) {
   return (
     <div>
       <div className="grid grid-cols-[repeat(13,1fr)] gap-1">
-        {days.map((day, i) => {
+        {days.map((day) => {
           const key = format(day, 'yyyy-MM-dd');
           const hours = map.get(key) ?? 0;
           return (
-            <motion.div
+            <div
               key={key}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: i * 0.002 }}
               title={`${format(day, 'MMM d')}: ${hours}h`}
               className={`aspect-square rounded-sm ${LEVELS[getLevel(hours)]} hover:ring-1 hover:ring-blue-400/50 cursor-default`}
             />
@@ -50,7 +46,7 @@ export function StudyHeatmap({ data }: HeatmapProps) {
       <div className="flex items-center justify-end gap-1 mt-3 text-[10px] text-slate-500">
         <span>Less</span>
         {LEVELS.map((l, i) => (
-          <motion.div key={i} className={`w-3 h-3 rounded-sm ${l}`} />
+          <div key={i} className={`w-3 h-3 rounded-sm ${l}`} />
         ))}
         <span>More</span>
       </div>

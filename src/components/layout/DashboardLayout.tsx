@@ -1,7 +1,6 @@
+import { lazy, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
-import { RightPanel } from './RightPanel';
 import { useUIStore } from '@/store/uiStore';
 import { useEffect } from 'react';
 import { dashboardApi } from '@/api';
@@ -12,6 +11,11 @@ import { useNavigate } from 'react-router-dom';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { readDashboardStatsCache, writeDashboardStatsCache } from '@/lib/sessionCache';
+
+const RightPanel = lazy(() =>
+  import('./RightPanel').then((m) => ({ default: m.RightPanel }))
+);
 
 export function DashboardLayout() {
   const location = useLocation();
@@ -24,10 +28,16 @@ export function DashboardLayout() {
 
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
-    queryFn: async () => (await dashboardApi.stats()).data as DashboardStats,
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
+    queryFn: async () => {
+      const data = (await dashboardApi.stats()).data as DashboardStats;
+      writeDashboardStatsCache(data);
+      return data;
+    },
+    placeholderData: readDashboardStatsCache<DashboardStats>,
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
   });
+
   const refreshStats = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     queryClient.invalidateQueries({ queryKey: ['target-analytics'] });
@@ -96,16 +106,14 @@ export function DashboardLayout() {
         </header>
 
         <div className="flex flex-1 overflow-hidden">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex-1 overflow-y-auto p-6"
-          >
+          <div key={location.pathname} className="route-enter flex-1 overflow-y-auto p-6">
             <Outlet context={{ stats: stats ?? null, setStats, refreshStats }} />
-          </motion.div>
-          {!focusMode && <RightPanel stats={stats ?? null} />}
+          </div>
+          {!focusMode && (
+            <Suspense fallback={null}>
+              <RightPanel stats={stats ?? null} />
+            </Suspense>
+          )}
         </div>
       </main>
     </div>

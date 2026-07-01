@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy,
@@ -18,15 +18,15 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { StudyHeatmap } from '@/components/charts/StudyHeatmap';
 import { scoreTargetsApi, studyApi } from '@/api';
+import { API_URL } from '@/api/client';
 import { useQuery } from '@tanstack/react-query';
 import { apiError } from '@/lib/apiError';
 import { ExamTargetsEditor } from '@/components/dashboard/ExamTargetsEditor';
 import { ScoreTargetsEditor } from '@/components/dashboard/ScoreTargetsEditor';
 import { TargetScorePanel } from '@/components/target/TargetScorePanel';
 import { RevisionTracker } from '@/components/revision/RevisionTracker';
-import { useBackendFeatures } from '@/hooks/useBackendFeatures';
-import { API_URL } from '@/api/client';
-import type { DashboardStats, StudySession } from '@/types';
+import { DeferredRender } from '@/components/perf/DeferredRender';
+import type { DashboardStats } from '@/types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -38,18 +38,22 @@ interface OutletContext {
 
 export function DashboardPage() {
   const { stats, setStats, refreshStats } = useOutletContext<OutletContext>();
-  const { features, checked } = useBackendFeatures();
 
   const { data: targetAnalytics } = useQuery({
     queryKey: ['target-analytics'],
     queryFn: async () => (await scoreTargetsApi.analytics()).data,
-    staleTime: 30_000,
+    staleTime: 2 * 60_000,
     enabled: !!stats,
   });
-  const canDeleteStudy =
-    stats?.api_features?.study_session_delete === true || features.study_session_delete;
-  const [sessions, setSessions] = useState<StudySession[]>([]);
-  const [showLog, setShowLog] = useState(false);
+
+  const { data: sessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ['study-sessions-recent'],
+    queryFn: async () => (await studyApi.sessions(7)).data,
+    staleTime: 60_000,
+    enabled: !!stats,
+  });
+
+  const canDeleteStudy = stats?.api_features?.study_session_delete === true;
   const [form, setForm] = useState({
     hours: '',
     topics: '',
@@ -57,10 +61,7 @@ export function DashboardPage() {
     notes: '',
     revision: false,
   });
-
-  useEffect(() => {
-    studyApi.sessions(7).then((r) => setSessions(r.data)).catch(() => {});
-  }, []);
+  const [showLog, setShowLog] = useState(false);
 
   const logStudy = async () => {
     if (!form.hours) {
@@ -80,8 +81,7 @@ export function DashboardPage() {
       toast.success('Study session logged! +XP');
       setShowLog(false);
       setForm({ hours: '', topics: '', productivity: '70', notes: '', revision: false });
-      const { data } = await studyApi.sessions(7);
-      setSessions(data);
+      await refetchSessions();
       await refreshStats();
     } catch {
       toast.error('Failed to log session');
@@ -91,14 +91,14 @@ export function DashboardPage() {
   const deleteStudy = async (id: number) => {
     if (!window.confirm('Delete this study session?')) return;
     try {
-      const { data: fresh } = await studyApi.sessions(7);
-      setSessions(fresh);
+      const fresh = sessions;
       if (!fresh.some((s) => s.id === id)) {
         toast.error('This session is no longer in your list. Refreshing…');
+        await refetchSessions();
         return;
       }
       await studyApi.deleteSession(id);
-      setSessions((prev) => prev.filter((s) => s.id !== id));
+      await refetchSessions();
       await refreshStats();
       toast.success('Study session deleted');
     } catch (err) {
@@ -110,8 +110,7 @@ export function DashboardPage() {
       } else {
         toast.error(msg);
       }
-      const { data } = await studyApi.sessions(7).catch(() => ({ data: [] }));
-      setSessions(data);
+      await refetchSessions();
     }
   };
 
@@ -199,7 +198,9 @@ export function DashboardPage() {
         </motion.div>
       )}
 
-      <RevisionTracker onComplete={refreshStats} />
+      <DeferredRender minHeight={200}>
+        <RevisionTracker onComplete={refreshStats} />
+      </DeferredRender>
 
       <motion.div className="grid lg:grid-cols-2 gap-6 perf-content-auto">
         <GlassCard>
@@ -255,7 +256,7 @@ export function DashboardPage() {
             </motion.div>
           )}
 
-          {checked && !canDeleteStudy && (
+          {stats?.api_features && !canDeleteStudy && (
             <p className="text-xs text-amber-400/90 mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
               Delete is unavailable on the API this app is using. Current API:{' '}
               <code className="text-amber-200 break-all">{API_URL}</code>. If you deployed on Render,
@@ -307,7 +308,9 @@ export function DashboardPage() {
 
         <GlassCard>
           <h3 className="font-semibold text-white mb-4">Study Consistency Heatmap</h3>
-          <StudyHeatmap data={stats.heatmap_data} />
+          <DeferredRender minHeight={120}>
+            <StudyHeatmap data={stats.heatmap_data} />
+          </DeferredRender>
         </GlassCard>
       </motion.div>
 

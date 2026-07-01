@@ -20,10 +20,11 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
+import { prefetchRoute } from '@/lib/routePrefetch';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/roadmap', icon: Map, label: 'Syllabus Roadmap' },
+  { to: '/roadmap', icon: Map, label: 'Roadmap' },
   { to: '/overall-analysis', icon: Brain, label: 'Overall Analysis' },
   { to: '/calc-trainer', icon: Calculator, label: 'Calc Trainer' },
   { to: '/analytics', icon: BarChart3, label: 'Full Mock Analytics' },
@@ -119,9 +120,7 @@ export function Sidebar() {
               to={to}
               end={to === '/'}
               title={collapsed ? label : undefined}
-              onMouseEnter={
-                to === '/calc-trainer' ? () => void import('@/pages/CalcTrainerPage') : undefined
-              }
+              onMouseEnter={() => prefetchRoute(to)}
               className={({ isActive }) =>
                 cn(
                   'flex items-center rounded-xl text-sm font-medium transition-all',

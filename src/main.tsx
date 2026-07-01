@@ -4,8 +4,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import App from './App.tsx';
 import { queryClient } from '@/lib/queryClient';
-import { initWebVitals } from '@/lib/webVitals';
 import { applyTheme, type Theme } from '@/lib/theme';
+import { prefetchCommonRoutes } from '@/lib/routePrefetch';
 
 function getInitialTheme(): Theme {
   try {
@@ -19,7 +19,22 @@ function getInitialTheme(): Theme {
 }
 
 applyTheme(getInitialTheme());
-void initWebVitals();
+
+const scheduleWebVitals = () => {
+  import('@/lib/webVitals').then(({ initWebVitals }) => initWebVitals());
+};
+
+if ('requestIdleCallback' in window) {
+  (window as Window & { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback(
+    scheduleWebVitals
+  );
+  (window as Window & { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback(
+    prefetchCommonRoutes
+  );
+} else {
+  setTimeout(scheduleWebVitals, 2000);
+  setTimeout(prefetchCommonRoutes, 3000);
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

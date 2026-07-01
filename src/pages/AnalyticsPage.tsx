@@ -1,8 +1,11 @@
-import { useOutletContext } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { MockTestForm } from '@/components/mock/MockTestForm';
 import { FullMockAnalyticsView } from '@/components/mock/FullMockAnalyticsView';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useMockTestAnalytics } from '@/hooks/useMockTestAnalytics';
+import { peekRoadmapMockIntent } from '@/lib/roadmapMockFlow';
 
 interface LayoutContext {
   refreshStats?: () => void;
@@ -10,8 +13,21 @@ interface LayoutContext {
 
 export function AnalyticsPage() {
   const { refreshStats } = useOutletContext<LayoutContext>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { analytics, mocks, showForm, setShowForm, saving, loading, submit, deleteMock, load } =
     useMockTestAnalytics('full', refreshStats);
+
+  useEffect(() => {
+    if (searchParams.get('add') === '1') {
+      setShowForm(true);
+      const intent = peekRoadmapMockIntent();
+      if (intent) {
+        toast('Log your full mock — score & sections save to Analytics', { icon: '📝' });
+      }
+      searchParams.delete('add');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, setShowForm]);
 
   if (loading && !analytics) {
     return (

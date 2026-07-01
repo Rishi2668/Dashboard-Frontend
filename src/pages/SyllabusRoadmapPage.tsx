@@ -1,132 +1,147 @@
 import { useCallback, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Map, TrendingUp } from 'lucide-react';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { ProgressRing } from '@/components/ui/ProgressRing';
-import { SubjectRoadmapCard } from '@/components/syllabus/SubjectRoadmapCard';
-import { syllabusApi, aiApi } from '@/api';
-import { AIInsightsPanel, type AnalysisInsight } from '@/components/ai/AIInsightsPanel';
-import type { SyllabusRoadmap } from '@/types/syllabus';
+import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { roadmap2026Api, syllabusApi } from '@/api';
+import { setRoadmapMockIntent } from '@/lib/roadmapMockFlow';
+import { RoadmapSummary } from '@/components/roadmap/RoadmapSummary';
+import { WeekCard } from '@/components/roadmap/WeekCard';
+import { cn } from '@/lib/utils';
 
 export function SyllabusRoadmapPage() {
-  const [roadmap, setRoadmap] = useState<SyllabusRoadmap | null>(null);
-  const [insights, setInsights] = useState<AnalysisInsight[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
-  const runSyllabusAi = useCallback(async () => {
-    setAiLoading(true);
-    try {
-      const { data } = await aiApi.domainAnalysis('syllabus');
-      setInsights(data.insights);
-    } catch {
-      toast.error('AI syllabus analysis failed');
-    } finally {
-      setAiLoading(false);
-    }
-  }, []);
-
-  const load = useCallback(async () => {
-    try {
-      const roadmapRes = await syllabusApi.roadmap();
-      setRoadmap(roadmapRes.data);
-    } catch {
-      toast.error('Failed to load syllabus roadmap');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['roadmap-2026'],
+    queryFn: async () => (await roadmap2026Api.get()).data,
+    staleTime: 2 * 60_000,
+  });
 
   useEffect(() => {
-    load();
-    runSyllabusAi();
-  }, [load, runSyllabusAi]);
-
-  const updateChapter = async (id: number, data: Record<string, unknown>) => {
-    try {
-      await syllabusApi.updateChapter(id, data);
-      await load();
-    } catch {
-      toast.error('Failed to update chapter');
+    if (data && selectedWeek === null) {
+      setSelectedWeek(data.current_week);
     }
-  };
+  }, [data, selectedWeek]);
 
-  if (loading) {
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ['roadmap-2026'] }),
+    [queryClient]
+  );
+
+  const toggleTopic = useCallback(
+    async (chapterId: number, completed: boolean) => {
+      try {
+        await syllabusApi.updateChapter(chapterId, {
+          completed,
+          progress_percentage: completed ? 100 : 0,
+        });
+        await refresh();
+      } catch {
+        toast.error('Could not save');
+      }
+    },
+    [refresh]
+  );
+
+  const updateTask = useCallback(
+    async (weekNumber: number, taskKey: string, payload: Record<string, unknown>) => {
+      try {
+        await roadmap2026Api.updateTask(weekNumber, taskKey, payload);
+        await refresh();
+      } catch {
+        toast.error('Could not save');
+      }
+    },
+    [refresh]
+  );
+
+  if (isLoading || !data) {
     return (
-      <div className="space-y-4 max-w-5xl animate-pulse">
-        <div className="h-40 bg-white/5 rounded-2xl" />
-        <div className="h-64 bg-white/5 rounded-2xl" />
-        <div className="h-64 bg-white/5 rounded-2xl" />
+      <div className="roadmap-page mx-auto max-w-2xl space-y-4 animate-pulse px-1">
+        <div className="roadmap-summary-card h-40" />
+        <div className="h-11 rounded-2xl bg-slate-200/80 dark:bg-white/5" />
+        <div className="roadmap-week-card h-96" />
       </div>
     );
   }
 
-  if (!roadmap) return null;
+  const activeWeek = data.weeks.find((w) => w.number === (selectedWeek ?? data.current_week));
+  const todayHint = data.productivity.today_tasks[0];
+  const isSunday = data.productivity.mock_reminder;
 
-  const vhIncomplete = roadmap.subjects.flatMap((s) =>
-    s.chapters.filter((c) => c.priority === 'very_high' && !c.completed)
-  ).length;
+  const openSundayMock = () => {
+    setRoadmapMockIntent(data.current_week, 'mandatory_mock');
+  };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
-            <Map className="text-white" size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">SSC CGL Syllabus Roadmap</h1>
-            <p className="text-sm text-slate-400">
-              Complete high-priority topics first — {vhIncomplete} very-high chapters remaining
-            </p>
-          </div>
-        </div>
-      </motion.div>
+    <div className="roadmap-page mx-auto max-w-2xl px-1 pb-16">
+      <RoadmapSummary data={data} />
 
-      <GlassCard className="flex flex-col sm:flex-row items-center justify-center gap-6 !p-4">
-        <ProgressRing progress={roadmap.overall_completion} size={100} label="Syllabus" />
-        <div className="text-center sm:text-left">
-          <p className="text-lg font-semibold text-white">
-            {roadmap.completed_chapters}/{roadmap.total_chapters} chapters done
+      {isSunday && (
+        <div className="roadmap-alert mt-5">
+          <p className="text-sm font-medium text-amber-950 dark:text-amber-50">
+            Sunday mock day — log your full test in Analytics.
           </p>
-          <p className="text-sm text-slate-400 mt-1">{roadmap.overall_completion}% overall completion</p>
-          {roadmap.days_to_exam != null && (
-            <p className="text-sm text-orange-400 mt-2">{roadmap.days_to_exam} days to exam</p>
+          <Link to="/analytics?add=1" onClick={openSundayMock} className="roadmap-alert-btn">
+            Log mock
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      )}
+
+      {!isSunday && todayHint && (
+        <div className="roadmap-hint mt-5">
+          <span className="roadmap-hint-label">Focus</span>
+          {todayHint}
+        </div>
+      )}
+
+      <div className="mt-7">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Your weeks</p>
+          {selectedWeek !== data.current_week && (
+            <button type="button" onClick={() => setSelectedWeek(data.current_week)} className="roadmap-text-link">
+              Jump to week {data.current_week}
+            </button>
           )}
         </div>
-      </GlassCard>
-
-      <AIInsightsPanel
-        title="AI Syllabus Roadmap Analysis"
-        insights={insights}
-        loading={aiLoading}
-        onRefresh={runSyllabusAi}
-      />
-
-      <GlassCard className="!p-4">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <TrendingUp size={16} className="text-green-400" />
-          <span>
-            Study order: <strong className="text-red-400">Very High</strong> →{' '}
-            <strong className="text-orange-400">High</strong> →{' '}
-            <strong className="text-amber-400">Medium</strong> →{' '}
-            <strong className="text-slate-400">Low</strong>
-          </span>
+        <div className="roadmap-week-scroll">
+          {data.weeks.map((w) => {
+            const active = w.number === selectedWeek;
+            return (
+              <button
+                key={w.number}
+                type="button"
+                onClick={() => setSelectedWeek(w.number)}
+                className={cn(
+                  'roadmap-week-pill',
+                  active && 'roadmap-week-pill--active',
+                  w.is_current && !active && 'roadmap-week-pill--current'
+                )}
+              >
+                <span className="roadmap-week-pill-num">W{w.number}</span>
+                <span className="roadmap-week-pill-bar">
+                  <span className="roadmap-week-pill-fill" style={{ width: `${w.completion_pct}%` }} />
+                </span>
+                {w.completion_pct >= 100 && <span className="roadmap-week-pill-check">✓</span>}
+              </button>
+            );
+          })}
         </div>
-      </GlassCard>
+      </div>
 
-      <div className="space-y-6">
-        {roadmap.subjects.map((subject, i) => (
-          <motion.div
-            key={subject.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-          >
-            <SubjectRoadmapCard subject={subject} onUpdateChapter={updateChapter} />
-          </motion.div>
-        ))}
+      {activeWeek && (
+        <div key={activeWeek.number} className="roadmap-week-enter mt-5">
+          <WeekCard week={activeWeek} onToggleTopic={toggleTopic} onUpdateTask={updateTask} />
+        </div>
+      )}
+
+      <div className="roadmap-schedule-footer mt-10">
+        <span className="roadmap-schedule-chip">GS · 3h</span>
+        <span className="roadmap-schedule-chip">English · 2.5h</span>
+        <span className="roadmap-schedule-chip">Quant + Reasoning · 2h</span>
       </div>
     </div>
   );

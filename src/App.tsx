@@ -1,5 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemedToaster } from '@/components/ui/ThemedToaster';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -33,28 +32,13 @@ const CalcTrainerPage = lazy(() =>
 
 function PageLoader() {
   return (
-    <motion.div className="flex items-center justify-center h-64">
-      <motion.div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-    </motion.div>
+    <div className="flex items-center justify-center h-64">
+      <div className="page-spinner" aria-label="Loading page" />
+    </div>
   );
 }
 
 export default function App() {
-  useEffect(() => {
-    const idle = 'requestIdleCallback' in window
-      ? (window as Window & { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback(() => {
-          void import('@/pages/DashboardPage');
-          void import('@/pages/AnalyticsPage');
-          void import('@/pages/SectionalAnalyticsPage');
-        })
-      : null;
-    return () => {
-      if (idle != null && 'cancelIdleCallback' in window) {
-        (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idle);
-      }
-    };
-  }, []);
-
   return (
     <ErrorBoundary>
       <BrowserRouter>

@@ -151,6 +151,22 @@ export const pyqApi = {
   create: (data: Record<string, unknown>) => api.post('/pyq/', data),
 };
 
+export const roadmap2026Api = {
+  get: () => api.get<import('@/types/roadmap2026').Roadmap2026>('/roadmap-2026/'),
+  updateTask: (
+    weekNumber: number,
+    taskKey: string,
+    data: {
+      completed?: boolean;
+      score?: number;
+      accuracy?: number;
+      time_taken_minutes?: number;
+      weak_areas?: string;
+      notes?: string;
+    }
+  ) => api.patch(`/roadmap-2026/tasks/${weekNumber}/${encodeURIComponent(taskKey)}`, data),
+};
+
 export const syllabusApi = {
   roadmap: () => api.get<import('@/types/syllabus').SyllabusRoadmap>('/syllabus/roadmap'),
   updateChapter: (id: number, data: import('@/types/syllabus').ChapterProgressUpdate) =>

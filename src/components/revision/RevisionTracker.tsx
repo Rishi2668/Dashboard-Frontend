@@ -1,12 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { RotateCcw, ChevronRight, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { revisionApi } from '@/api';
-import { buildDashboardFromItems, enrichRevisionItem } from '@/lib/revisionFallback';
-import type { RevisionDashboardSummary } from '@/types/revision';
+import { fetchRevisionDashboard } from '@/lib/revisionDashboard';
 import { RevisionCard } from './RevisionCard';
 import toast from 'react-hot-toast';
 
@@ -16,53 +14,27 @@ interface RevisionTrackerProps {
 }
 
 export function RevisionTracker({ onComplete, compact }: RevisionTrackerProps) {
-  const [summary, setSummary] = useState<RevisionDashboardSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const load = useCallback(async () => {
-    try {
-      const { data } = await revisionApi.dashboard();
-      setSummary({
-        ...data,
-        today_items: (data.today_items ?? []).map((i) =>
-          enrichRevisionItem(i as unknown as Record<string, unknown>)
-        ),
-        tomorrow_items: (data.tomorrow_items ?? []).map((i) =>
-          enrichRevisionItem(i as unknown as Record<string, unknown>)
-        ),
-        overdue_items: (data.overdue_items ?? []).map((i) =>
-          enrichRevisionItem(i as unknown as Record<string, unknown>)
-        ),
-        completion_percentage: Number(data.completion_percentage ?? 0),
-      });
-    } catch {
-      try {
-        const { data } = await revisionApi.list({ limit: 200 });
-        setSummary(buildDashboardFromItems(data.items));
-      } catch {
-        setSummary(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ['revision-dashboard'],
+    queryFn: fetchRevisionDashboard,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+  });
 
   const handleComplete = async (id: number) => {
     try {
       await revisionApi.complete(id);
       toast.success('Revision completed!');
-      await load();
+      await queryClient.invalidateQueries({ queryKey: ['revision-dashboard'] });
       onComplete?.();
     } catch {
       toast.error('Could not complete revision');
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <GlassCard>
         <div className="h-32 animate-pulse bg-white/5 rounded-xl" />
@@ -96,34 +68,10 @@ export function RevisionTracker({ onComplete, compact }: RevisionTrackerProps) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <Widget
-          icon={Calendar}
-          label="Today"
-          value={summary.today_count}
-          color="text-yellow-400"
-          bg="bg-yellow-500/10"
-        />
-        <Widget
-          icon={Calendar}
-          label="Tomorrow"
-          value={summary.tomorrow_count}
-          color="text-blue-400"
-          bg="bg-blue-500/10"
-        />
-        <Widget
-          icon={AlertTriangle}
-          label="Overdue"
-          value={summary.overdue_count}
-          color="text-red-400"
-          bg="bg-red-500/10"
-        />
-        <Widget
-          icon={CheckCircle2}
-          label="Done"
-          value={summary.completed_count}
-          color="text-green-400"
-          bg="bg-green-500/10"
-        />
+        <Widget icon={Calendar} label="Today" value={summary.today_count} color="text-yellow-400" bg="bg-yellow-500/10" />
+        <Widget icon={Calendar} label="Tomorrow" value={summary.tomorrow_count} color="text-blue-400" bg="bg-blue-500/10" />
+        <Widget icon={AlertTriangle} label="Overdue" value={summary.overdue_count} color="text-red-400" bg="bg-red-500/10" />
+        <Widget icon={CheckCircle2} label="Done" value={summary.completed_count} color="text-green-400" bg="bg-green-500/10" />
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-4 p-3 bg-white/5 rounded-xl">
@@ -149,12 +97,7 @@ export function RevisionTracker({ onComplete, compact }: RevisionTrackerProps) {
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-wider text-slate-500">Action needed</p>
           {focusItems.map((item) => (
-            <RevisionCard
-              key={item.id}
-              item={item}
-              onComplete={handleComplete}
-              compact={compact}
-            />
+            <RevisionCard key={item.id} item={item} onComplete={handleComplete} compact={compact} />
           ))}
         </div>
       ) : (
@@ -178,13 +121,10 @@ function Widget({
   bg: string;
 }) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      className={`${bg} rounded-xl p-3 text-center border border-white/5`}
-    >
+    <div className={`${bg} rounded-xl p-3 text-center border border-white/5 transition-transform hover:scale-[1.02]`}>
       <Icon className={`mx-auto mb-1 ${color}`} size={18} />
       <p className={`text-xl font-bold ${color}`}>{value}</p>
       <p className="text-[10px] text-slate-500 uppercase">{label}</p>
-    </motion.div>
+    </div>
   );
 }
