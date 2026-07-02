@@ -7,6 +7,7 @@ interface WeekCardProps {
   week: RoadmapWeek;
   onToggleTopic: (chapterId: number, completed: boolean) => Promise<void>;
   onUpdateTask: (weekNumber: number, taskKey: string, data: Record<string, unknown>) => Promise<void>;
+  onToggleVocab?: (weekNumber: number, taskKey: string, completed: boolean) => Promise<void>;
 }
 
 const PHASE_LABEL: Record<number, string> = {
@@ -22,7 +23,7 @@ const SUBJECT_DOT: Record<string, string> = {
   Reasoning: 'roadmap-dot--reasoning',
 };
 
-export function WeekCard({ week, onToggleTopic, onUpdateTask }: WeekCardProps) {
+export function WeekCard({ week, onToggleTopic, onUpdateTask, onToggleVocab }: WeekCardProps) {
   const handleTask = (taskKey: string, data: Record<string, unknown>) =>
     onUpdateTask(week.number, taskKey, data);
 
@@ -36,6 +37,12 @@ export function WeekCard({ week, onToggleTopic, onUpdateTask }: WeekCardProps) {
             <p className="mt-0.5 text-xs text-slate-500">
               {week.start} – {week.end}
             </p>
+            {week.english_phase_name && (
+              <p className="mt-1 text-xs font-medium text-purple-600 dark:text-purple-400">
+                English Phase {week.english_phase}: {week.english_phase_name}
+                {week.english_phase_note ? ` · ${week.english_phase_note}` : ''}
+              </p>
+            )}
           </div>
           <div className="roadmap-week-score">
             <p className="text-xl font-bold tabular-nums text-slate-900 dark:text-white">
@@ -52,6 +59,28 @@ export function WeekCard({ week, onToggleTopic, onUpdateTask }: WeekCardProps) {
       </header>
 
       <div className="space-y-5 pt-1">
+        {week.daily_vocab.length > 0 && onToggleVocab && (
+          <section>
+            <h3 className="roadmap-section-label">
+              <span className="roadmap-dot roadmap-dot--english" />
+              Daily Vocabulary
+            </h3>
+            <p className="mb-2 text-xs text-slate-500">Mon–Sat · repeats all 10 weeks · 45 min in your 2.5h block</p>
+            <div className="english-vocab-days english-vocab-days--compact">
+              {week.daily_vocab.map((day) => (
+                <button
+                  key={day.key}
+                  type="button"
+                  onClick={() => onToggleVocab(week.number, day.key, !day.completed)}
+                  className={cn('english-vocab-day', day.completed && 'english-vocab-day--done')}
+                >
+                  {day.label}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {week.sections.map((sec) => (
           <section key={sec.subject}>
             <h3 className="roadmap-section-label">

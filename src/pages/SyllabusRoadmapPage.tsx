@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { roadmap2026Api, syllabusApi } from '@/api';
 import { setRoadmapMockIntent } from '@/lib/roadmapMockFlow';
 import { RoadmapSummary } from '@/components/roadmap/RoadmapSummary';
+import { EnglishDailyHub } from '@/components/roadmap/EnglishDailyHub';
 import { WeekCard } from '@/components/roadmap/WeekCard';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +58,13 @@ export function SyllabusRoadmapPage() {
     [refresh]
   );
 
+  const toggleVocab = useCallback(
+    async (weekNumber: number, taskKey: string, completed: boolean) => {
+      await updateTask(weekNumber, taskKey, { completed });
+    },
+    [updateTask]
+  );
+
   if (isLoading || !data) {
     return (
       <div className="roadmap-page mx-auto max-w-2xl space-y-4 animate-pulse px-1">
@@ -78,6 +86,17 @@ export function SyllabusRoadmapPage() {
   return (
     <div className="roadmap-page mx-auto max-w-2xl px-1 pb-16">
       <RoadmapSummary data={data} />
+
+      {data.english_roadmap && (
+        <div className="mt-5">
+          <EnglishDailyHub
+            english={data.english_roadmap}
+            vocabStreak={data.vocab_streak}
+            currentWeek={data.current_week}
+            onToggleVocab={toggleVocab}
+          />
+        </div>
+      )}
 
       {isSunday && (
         <div className="roadmap-alert mt-5">
@@ -134,7 +153,12 @@ export function SyllabusRoadmapPage() {
 
       {activeWeek && (
         <div key={activeWeek.number} className="roadmap-week-enter mt-5">
-          <WeekCard week={activeWeek} onToggleTopic={toggleTopic} onUpdateTask={updateTask} />
+          <WeekCard
+            week={activeWeek}
+            onToggleTopic={toggleTopic}
+            onUpdateTask={updateTask}
+            onToggleVocab={toggleVocab}
+          />
         </div>
       )}
 
