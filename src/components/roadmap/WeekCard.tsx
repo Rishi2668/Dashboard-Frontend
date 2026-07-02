@@ -7,7 +7,7 @@ interface WeekCardProps {
   week: RoadmapWeek;
   onToggleTopic: (chapterId: number, completed: boolean) => Promise<void>;
   onUpdateTask: (weekNumber: number, taskKey: string, data: Record<string, unknown>) => Promise<void>;
-  onToggleVocab?: (weekNumber: number, taskKey: string, completed: boolean) => Promise<void>;
+  onToggleHabit?: (weekNumber: number, taskKey: string, completed: boolean) => Promise<void>;
 }
 
 const PHASE_LABEL: Record<number, string> = {
@@ -23,7 +23,13 @@ const SUBJECT_DOT: Record<string, string> = {
   Reasoning: 'roadmap-dot--reasoning',
 };
 
-export function WeekCard({ week, onToggleTopic, onUpdateTask, onToggleVocab }: WeekCardProps) {
+const DAILY_HABITS = [
+  { field: 'daily_gs' as const, label: 'Daily GS', dot: 'roadmap-dot--gs' },
+  { field: 'daily_vocab' as const, label: 'Daily Vocabulary', dot: 'roadmap-dot--english' },
+  { field: 'daily_qr' as const, label: 'Daily Quant & Reasoning', dot: 'roadmap-dot--quant' },
+];
+
+export function WeekCard({ week, onToggleTopic, onUpdateTask, onToggleHabit }: WeekCardProps) {
   const handleTask = (taskKey: string, data: Record<string, unknown>) =>
     onUpdateTask(week.number, taskKey, data);
 
@@ -59,24 +65,38 @@ export function WeekCard({ week, onToggleTopic, onUpdateTask, onToggleVocab }: W
       </header>
 
       <div className="space-y-5 pt-1">
-        {week.daily_vocab.length > 0 && onToggleVocab && (
-          <section>
+        {onToggleHabit && (
+          <section className="roadmap-daily-habits-block">
             <h3 className="roadmap-section-label">
-              <span className="roadmap-dot roadmap-dot--english" />
-              Daily Vocabulary
+              <span className="roadmap-dot roadmap-dot--sunday" />
+              Daily habits (Mon–Sat)
             </h3>
-            <p className="mb-2 text-xs text-slate-500">Mon–Sat · repeats all 10 weeks · 45 min in your 2.5h block</p>
-            <div className="english-vocab-days english-vocab-days--compact">
-              {week.daily_vocab.map((day) => (
-                <button
-                  key={day.key}
-                  type="button"
-                  onClick={() => onToggleVocab(week.number, day.key, !day.completed)}
-                  className={cn('english-vocab-day', day.completed && 'english-vocab-day--done')}
-                >
-                  {day.label}
-                </button>
-              ))}
+            <p className="mb-3 text-xs text-slate-500">Same schedule every week — GS, English, Quant+Reasoning</p>
+            <div className="space-y-3">
+              {DAILY_HABITS.map(({ field, label, dot }) => {
+                const habits = week[field] ?? [];
+                if (!habits.length) return null;
+                return (
+                  <div key={field}>
+                    <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+                      <span className={cn('roadmap-dot', dot)} />
+                      {label}
+                    </p>
+                    <div className="english-vocab-days english-vocab-days--compact">
+                      {habits.map((day) => (
+                        <button
+                          key={day.key}
+                          type="button"
+                          onClick={() => onToggleHabit(week.number, day.key, !day.completed)}
+                          className={cn('english-vocab-day', day.completed && 'english-vocab-day--done')}
+                        >
+                          {day.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

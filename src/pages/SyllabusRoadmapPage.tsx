@@ -5,17 +5,25 @@ import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { roadmap2026Api, syllabusApi } from '@/api';
 import { setRoadmapMockIntent } from '@/lib/roadmapMockFlow';
+import {
+  patchChapterCompleted,
+  patchDailyHabit,
+  patchVirtualTask,
+} from '@/lib/roadmapOptimistic';
 import { RoadmapSummary } from '@/components/roadmap/RoadmapSummary';
-import { EnglishDailyHub } from '@/components/roadmap/EnglishDailyHub';
+import { DailyStudyHub } from '@/components/roadmap/DailyStudyHub';
 import { WeekCard } from '@/components/roadmap/WeekCard';
+import type { Roadmap2026 } from '@/types/roadmap2026';
 import { cn } from '@/lib/utils';
+
+const ROADMAP_KEY = ['roadmap-2026'] as const;
 
 export function SyllabusRoadmapPage() {
   const queryClient = useQueryClient();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['roadmap-2026'],
+    queryKey: ROADMAP_KEY,
     queryFn: async () => (await roadmap2026Api.get()).data,
     staleTime: 2 * 60_000,
   });
@@ -26,39 +34,54 @@ export function SyllabusRoadmapPage() {
     }
   }, [data, selectedWeek]);
 
-  const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ['roadmap-2026'] }),
+  const setRoadmap = useCallback(
+    (updater: (prev: Roadmap2026) => Roadmap2026) => {
+      queryClient.setQueryData<Roadmap2026>(ROADMAP_KEY, (prev) => (prev ? updater(prev) : prev));
+    },
     [queryClient]
   );
 
   const toggleTopic = useCallback(
     async (chapterId: number, completed: boolean) => {
+      const prev = queryClient.getQueryData<Roadmap2026>(ROADMAP_KEY);
+      if (!prev) return;
+      setRoadmap((d) => patchChapterCompleted(d, chapterId, completed));
       try {
         await syllabusApi.updateChapter(chapterId, {
           completed,
           progress_percentage: completed ? 100 : 0,
         });
-        await refresh();
       } catch {
-        toast.error('Could not save');
+        if (prev) queryClient.setQueryData(ROADMAP_KEY, prev);
+        toast.error('Could not save — try again');
       }
     },
-    [refresh]
+    [queryClient, setRoadmap]
   );
 
   const updateTask = useCallback(
     async (weekNumber: number, taskKey: string, payload: Record<string, unknown>) => {
+      const prev = queryClient.getQueryData<Roadmap2026>(ROADMAP_KEY);
+      if (!prev) return;
+      const completed = payload.completed as boolean | undefined;
+      if (typeof completed === 'boolean') {
+        if (taskKey.startsWith('daily_')) {
+          setRoadmap((d) => patchDailyHabit(d, weekNumber, taskKey, completed));
+        } else {
+          setRoadmap((d) => patchVirtualTask(d, weekNumber, taskKey, completed));
+        }
+      }
       try {
         await roadmap2026Api.updateTask(weekNumber, taskKey, payload);
-        await refresh();
       } catch {
+        if (prev) queryClient.setQueryData(ROADMAP_KEY, prev);
         toast.error('Could not save');
       }
     },
-    [refresh]
+    [queryClient, setRoadmap]
   );
 
-  const toggleVocab = useCallback(
+  const toggleHabit = useCallback(
     async (weekNumber: number, taskKey: string, completed: boolean) => {
       await updateTask(weekNumber, taskKey, { completed });
     },
@@ -87,14 +110,9 @@ export function SyllabusRoadmapPage() {
     <div className="roadmap-page mx-auto max-w-2xl px-1 pb-16">
       <RoadmapSummary data={data} />
 
-      {data.english_roadmap && (
+      {data.daily_study_hub && (
         <div className="mt-5">
-          <EnglishDailyHub
-            english={data.english_roadmap}
-            vocabStreak={data.vocab_streak}
-            currentWeek={data.current_week}
-            onToggleVocab={toggleVocab}
-          />
+          <DailyStudyHub hub={data.daily_study_hub} onToggleHabit={toggleHabit} />
         </div>
       )}
 
@@ -157,7 +175,7 @@ export function SyllabusRoadmapPage() {
             week={activeWeek}
             onToggleTopic={toggleTopic}
             onUpdateTask={updateTask}
-            onToggleVocab={toggleVocab}
+            onToggleHabit={toggleHabit}
           />
         </div>
       )}

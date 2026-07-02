@@ -19,7 +19,7 @@ export interface RoadmapTask {
   notes?: string | null;
 }
 
-export interface DailyVocabDay {
+export interface DailyHabitDay {
   key: string;
   label: string;
   completed: boolean;
@@ -37,7 +37,9 @@ export interface RoadmapWeek {
   sections: { subject: string; topics: RoadmapTopic[] }[];
   virtual_tasks: RoadmapTask[];
   mock_tasks: RoadmapTask[];
-  daily_vocab: DailyVocabDay[];
+  daily_vocab: DailyHabitDay[];
+  daily_gs: DailyHabitDay[];
+  daily_qr: DailyHabitDay[];
   completion_pct: number;
   completed_count: number;
   total_count: number;
@@ -73,13 +75,35 @@ export interface EnglishPhase {
   topics: EnglishPhaseTopic[];
 }
 
+export interface DailyStudySubject {
+  subject_key: string;
+  label: string;
+  hours: number;
+  habit_label: string;
+  habit_field: string;
+  blocks: { label: string; minutes: number; focus: string }[];
+  habits: DailyHabitDay[];
+  habits_done: number;
+  streak: number;
+  next_topic: string | null;
+  week_topics: RoadmapTopic[];
+}
+
+export interface DailyStudyHub {
+  current_week: number;
+  subjects: DailyStudySubject[];
+  english_phases: EnglishPhase[];
+  english_current_phase_id: number;
+  english_current_phase_name: string;
+}
+
 export interface EnglishRoadmap {
   phases: EnglishPhase[];
   current_phase_id: number;
   current_phase_name: string;
   daily_block_minutes: { label: string; minutes: number; focus: string }[];
   daily_hours: number;
-  current_week_vocab: DailyVocabDay[];
+  current_week_vocab: DailyHabitDay[];
   current_week_english_topics: RoadmapTopic[];
 }
 
@@ -120,6 +144,7 @@ export interface Roadmap2026 {
   completion_streak: number;
   counters: { vocabulary: number; vocabulary_total: number; formula_revision: number; pyq: number };
   english_roadmap: EnglishRoadmap;
+  daily_study_hub: DailyStudyHub;
   vocab_streak: VocabStreak;
   productivity: {
     today_tasks: string[];
